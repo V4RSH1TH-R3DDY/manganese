@@ -15,6 +15,7 @@ export default function MapView({ mines, selected, onSelect, prospectivity, show
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<MapLibreMap | null>(null);
   const minesRef = useRef(mines); minesRef.current = mines;
+  const popup = useRef<{ code: string; p: maplibregl.Popup } | null>(null);
 
   useEffect(() => {                                            // create map once
     const m = new maplibregl.Map({
@@ -56,9 +57,10 @@ export default function MapView({ mines, selected, onSelect, prospectivity, show
         paint: { "circle-radius": 8, "circle-color": COLOR, "circle-stroke-color": "#fff", "circle-stroke-width": 1.5 } });
       m.on("click", "mines-dot", (e) => {
         const p = e.features![0].properties as any;
+        popup.current?.p.remove();
+        popup.current = { code: p.code, p: new maplibregl.Popup({ closeButton: false }).setLngLat((e.features![0].geometry as any).coordinates)
+          .setHTML(`<b>${p.name}</b><br/>Shortfall ${Number(p.pct).toFixed(1)}%${p.res ? `<br/>Reserve P50 ${fmtT(Number(p.res))}` : ""}`).addTo(m) };
         onSelect(p.code);
-        new maplibregl.Popup({ closeButton: false }).setLngLat((e.features![0].geometry as any).coordinates)
-          .setHTML(`<b>${p.name}</b><br/>Shortfall ${Number(p.pct).toFixed(1)}%${p.res ? `<br/>Reserve P50 ${fmtT(Number(p.res))}` : ""}`).addTo(m);
       });
       m.on("mouseenter", "mines-dot", () => (m.getCanvas().style.cursor = "pointer"));
       m.on("mouseleave", "mines-dot", () => (m.getCanvas().style.cursor = ""));
@@ -69,6 +71,7 @@ export default function MapView({ mines, selected, onSelect, prospectivity, show
   useEffect(() => {                                            // fly to + highlight selection
     const m = map.current, s = minesRef.current.find((x) => x.code === selected);
     if (!m || !s) return;
+    if (popup.current && popup.current.code !== selected) { popup.current.p.remove(); popup.current = null; }
     m.flyTo({ center: [s.lon, s.lat], zoom: 9.5, duration: 900 });
     if (m.getLayer("mines-dot"))
       m.setPaintProperty("mines-dot", "circle-stroke-width", ["case", ["==", ["get", "code"], selected], 4, 1.5]);

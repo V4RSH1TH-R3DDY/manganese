@@ -1,7 +1,7 @@
 import datetime as dt
 
 import numpy as np
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from app.ml.optimizer import redeploy
@@ -44,10 +44,11 @@ def rule_actions(mine: Mine, r: RiskOut) -> list[dict]:
 def redeploy_actions(db: Session, mines: list[Mine], risks: dict[str, RiskOut]) -> list[dict]:
     by_id = {m.id: m for m in mines}
     units_db = db.scalars(select(EquipmentUnit)).all()
+    last_day = (select(EquipmentDaily.unit_code, func.max(EquipmentDaily.date).label("d"))
+                .group_by(EquipmentDaily.unit_code).subquery())     # portable: no Postgres DISTINCT ON
     latest = {r[0]: r[1] for r in db.execute(
         select(EquipmentDaily.unit_code, EquipmentDaily.breakdown)
-        .distinct(EquipmentDaily.unit_code)
-        .order_by(EquipmentDaily.unit_code, EquipmentDaily.date.desc()))}
+        .join(last_day, (EquipmentDaily.unit_code == last_day.c.unit_code) & (EquipmentDaily.date == last_day.c.d)))}
 
     units = [dict(id=u.code, home=by_id[u.home_mine_id].code, tpd=u.tpd, type=u.type)
              for u in units_db if not latest.get(u.code, False)]
