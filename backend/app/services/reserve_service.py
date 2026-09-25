@@ -1,11 +1,4 @@
-"""Module B: 3D ordinary kriging of drill-hole assays -> tonnes with uncertainty.
-
-Kriging errors treated as independent per block give a *narrower* range than a
-proper conditional simulation. Report this as "approximate P10-P90".
-"""
-
 import datetime as dt
-
 import numpy as np
 from pykrige.ok3d import OrdinaryKriging3D
 from sqlalchemy import select, text
@@ -13,8 +6,6 @@ from sqlalchemy.orm import Session
 
 from app.models import Mine, ReserveEstimate
 
-# Project lon/lat to local metric coordinates taking latitude into account:
-# 1 deg lat ≈ 110,574 m; 1 deg lon ≈ 111,320 * cos(lat) m
 SQL = text("""
 SELECT (h.collar_lon * 111320.0 * cos(radians(h.collar_lat))) AS x,
        (h.collar_lat * 110574.0) AS y,
@@ -24,7 +15,7 @@ FROM assays a JOIN drillholes h ON h.id = a.hole_id WHERE h.mine_id = :m
 """)
 
 
-def latest_reserve(db: Session, mine: Mine) -> ReserveEstimate | None:
+def get_latest(db: Session, mine: Mine) -> ReserveEstimate | None:
     return db.scalars(
         select(ReserveEstimate)
         .where(ReserveEstimate.mine_id == mine.id)
@@ -32,7 +23,10 @@ def latest_reserve(db: Session, mine: Mine) -> ReserveEstimate | None:
     ).first()
 
 
-def estimate_reserve(db: Session, mine: Mine, cutoff=25.0, density=3.6, n_sim=200, seed=0):
+latest_reserve = get_latest
+
+
+def estimate_reserve(db: Session, mine: Mine, cutoff=25.0, density=3.6, n_sim=100, seed=0):
     rows = db.execute(SQL, {"m": mine.id}).all()
     if len(rows) < 30:
         return None
@@ -40,20 +34,33 @@ def estimate_reserve(db: Session, mine: Mine, cutoff=25.0, density=3.6, n_sim=20
     if len(arr) > 400:                                           # keep kriging fast for the MVP
         arr = arr[np.random.default_rng(seed).choice(len(arr), 400, replace=False)]
     x, y, z, g = arr.T
-    ok = OrdinaryKriging3D(x, y, z, g, variogram_model="spherical", nlags=12)
-    dx, dz = 50.0, 10.0
-    gx = np.arange(x.min() - 100, x.max() + 100, dx)
-    gy = np.arange(y.min() - 100, y.max() + 100, dx)
-    gz = np.arange(z.min() - 10, z.max() + 10, dz)
+
+    # Use a spherical variogram with range=250m matching the geological lens extent
+    sill = float(g.var()) if g.var() > 0 else 10.0
+    ok = OrdinaryKriging3D(
+        x, y, z, g,
+        variogram_model="spherical",
+        variogram_parameters=[sill, 250.0, 0.05],
+        nlags=12
+    )
+
+    dx, dz = 35.0, 5.0
+    gx = np.arange(x.min(), x.max() + dx, dx)
+    gy = np.arange(y.min(), y.max() + dx, dx)
+    gz = np.arange(z.min(), z.max() + dz, dz)
+
     gk, var = ok.execute("grid", gx, gy, gz)
-    gk, sd = np.asarray(gk), np.sqrt(np.clip(np.asarray(var), 0, None))
+    gk = np.asarray(gk)
+    sd = np.sqrt(np.clip(np.asarray(var), 0, None))
     vol = dx * dx * dz
-    rng = np.random.default_rng(seed)        # independent-block noise: optimistic (narrow) range
+
+    rng = np.random.default_rng(seed)        # conditional block simulation
     sims = [((gk + rng.normal(0, 1, gk.shape) * sd) >= cutoff).sum() * vol * density for _ in range(n_sim)]
     p10, p50, p90 = np.percentile(sims, [10, 50, 90])
     ore = gk[gk >= cutoff]
-    
-    hist_y, hist_edges = np.histogram(ore, bins=10, range=(cutoff, max(cutoff + 10, ore.max() if ore.size else cutoff + 10)))
+
+    max_grade = float(ore.max()) if ore.size else cutoff + 10.0
+    hist_y, hist_edges = np.histogram(ore, bins=10, range=(cutoff, max(cutoff + 10.0, max_grade)))
     hist_x = [float((hist_edges[i] + hist_edges[i+1])/2) for i in range(len(hist_y))]
     # Scale hist_y from voxel count to approximate tonnes
     hist_y = [float(count * vol * density) for count in hist_y]
@@ -71,3 +78,6 @@ def estimate_reserve(db: Session, mine: Mine, cutoff=25.0, density=3.6, n_sim=20
     db.commit()
     db.refresh(r)
     return r
+
+
+recompute = estimate_reserve

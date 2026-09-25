@@ -19,6 +19,18 @@ export interface Reserve { mine: string; p10_t: number; p50_t: number; p90_t: nu
 export interface Action { id: number; mine: string; kind: string; title: string; detail: Record<string, unknown>; expected_tonnes: number; confidence: number; status: string }
 export interface MineSummary { code: string; name: string; method: string; lat: number; lon: number; level: Level; expected_shortfall_pct: number; reserve_p50_t: number | null }
 export interface DrillHolePoint { id: number; mine_code: string; lat: number; lon: number; collar_z: number }
+export interface DepositPoint {
+  dep_id: string;
+  site_name: string;
+  latitude: number;
+  longitude: number;
+  state: string;
+  dev_stat?: string;
+  oper_type?: string;
+  ore?: string;
+  gangue?: string;
+  host_rock?: string;
+}
 
 export interface Provenance { source: string; mode: "synthetic" | "live" | "uploaded" | "unknown"; detail: string; updated_at: string | null }
 export interface Health {
@@ -30,6 +42,7 @@ export const api = {
   health: () => j<Health>("/health"),
   mines: () => j<MineSummary[]>("/mines"),
   drillholes: () => j<DrillHolePoint[]>("/mines/drillholes"),
+  deposits: () => j<DepositPoint[]>("/prospectivity/deposits"),
   risk: (mine: string, h = 7) => j<Risk>(`/risk/${mine}?horizon=${h}`),
   reserves: (mine: string) => j<Reserve>(`/reserves/${mine}`),
   recomputeReserve: (mine: string, cutoff = 25.0) =>
@@ -45,6 +58,23 @@ export const api = {
     }),
   simulate: (id: number, h = 7) => j<Risk>(`/actions/${id}/simulate?horizon=${h}`, { method: "POST" }),
   prospectivity: () => j<{ tiles: string; bounds: [number, number, number, number] }>("/prospectivity/meta"),
+  downloadTemplate: async (kind: string) => {
+    const res = await fetch(`${BASE}/ingest/template/${kind}`, {
+      headers: { "X-API-Key": API_KEY }
+    });
+    if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${kind}_template.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  },
+  records: (kind: string, limit = 15) =>
+    j<any[]>(`/ingest/records/${kind}?limit=${limit}`, {
+      headers: { "X-API-Key": API_KEY }
+    }),
   ingest: (kind: string, file: File) => {
     const fd = new FormData(); fd.append("file", file);
     return j<{

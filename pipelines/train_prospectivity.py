@@ -11,6 +11,7 @@ from sklearn.metrics import roc_auc_score, average_precision_score
 from sklearn.model_selection import GroupKFold
 
 FEATURE_DIR = Path("data/features")
+DEPOSITS_JSON = Path("data/deposits.json")
 MRDS_PATH = Path("data/fulltext-search.json")
 ARTIFACT_OUT = Path("artifacts/prospectivity.joblib")
 BACKEND_ARTIFACT = Path("backend/artifacts/prospectivity.joblib")
@@ -21,24 +22,35 @@ MOIL_MINES = [
     ("Mansar", 21.383, 79.250),
     ("Dongri Buzurg", 21.548, 79.682),
     ("Balaghat", 21.966, 80.233),
-    ("Chikla", 21.516, 79.750)
+    ("Chikla", 21.516, 79.750),
+    ("Tirodi", 21.683, 79.717),
+    ("Ukwa", 21.966, 80.467),
 ]
 
 def load_positives(ref_profile):
     positives = []
-    # 1. From MRDS search JSON
-    with open(MRDS_PATH) as f:
-        mrds_list = json.load(f)
-    for item in mrds_list:
-        try:
-            geo = json.loads(item["json"])["geometry"]
-            lon, lat = geo["coordinates"]
-            if 78.5 <= lon <= 81.0 and 21.0 <= lat <= 22.5:
-                positives.append((item.get("site_name", "MRDS deposit"), lat, lon))
-        except Exception:
-            pass
+    # 1. From consolidated deposits if available
+    if DEPOSITS_JSON.exists():
+        with open(DEPOSITS_JSON) as f:
+            deps = json.load(f)
+        for d in deps:
+            lon, lat = d.get("longitude"), d.get("latitude")
+            if lon and lat and 78.5 <= lon <= 81.0 and 21.0 <= lat <= 22.5:
+                positives.append((d.get("site_name", "Deposit"), lat, lon))
+    else:
+        # Fallback to MRDS search JSON
+        with open(MRDS_PATH) as f:
+            mrds_list = json.load(f)
+        for item in mrds_list:
+            try:
+                geo = json.loads(item["json"])["geometry"]
+                lon, lat = geo["coordinates"]
+                if 78.5 <= lon <= 81.0 and 21.0 <= lat <= 22.5:
+                    positives.append((item.get("site_name", "MRDS deposit"), lat, lon))
+            except Exception:
+                pass
 
-    # 2. MOIL mines
+    # Ensure MOIL mines
     for name, lat, lon in MOIL_MINES:
         positives.append((name, lat, lon))
 
@@ -64,58 +76,45 @@ def main():
 
     # 1. Positives
     df_pos = load_positives(prof)
-    pos_coords = list(zip(df_pos.lon, df_pos.lat))
+    rows_pos = []
+    for _, r in df_pos.iterrows():
+        py, px = rasterio.transform.rowcol(trans, r.lon, r.lat)
+        if 0 <= py < height and 0 <= px < width:
+            feat_vals = stack[:, py, px]
+            if not np.any(np.isnan(feat_vals)) and not np.any(feat_vals == -9999.0):
+                rows_pos.append(dict(zip(feat_names, feat_vals), label=1, lat=r.lat, lon=r.lon, name=r["name"]))
 
-    # Convert coordinates to pixel row, col
-    pos_rows, pos_cols = [], []
-    for lon, lat in pos_coords:
-        r, c = rasterio.transform.rowcol(trans, lon, lat)
-        if 0 <= r < height and 0 <= c < width:
-            pos_rows.append(r)
-            pos_cols.append(c)
+    df_pos_samples = pd.DataFrame(rows_pos)
+    print(f"Valid positive training points sampled: {len(df_pos_samples)}")
 
-    pos_rows = np.array(pos_rows)
-    pos_cols = np.array(pos_cols)
+    # 2. Random Background / Unlabeled Negatives (Positive-Unlabeled exploration setup)
+    np.random.seed(42)
+    n_neg = len(df_pos_samples) * 12 # 1:12 class imbalance
+    neg_rows = []
+    attempts = 0
+    while len(neg_rows) < n_neg and attempts < 100000:
+        attempts += 1
+        ry = np.random.randint(0, height)
+        rx = np.random.randint(0, width)
+        rlon, rlat = rasterio.transform.xy(trans, ry, rx)
+        # Check buffer from positives (must be > 2.5 km away)
+        dist_sq = ((df_pos.lat - rlat)**2 + (df_pos.lon - rlon)**2).min()
+        if dist_sq < (0.025)**2:
+            continue
+        vals = stack[:, ry, rx]
+        if not np.any(np.isnan(vals)) and not np.any(vals == -9999.0):
+            neg_rows.append(dict(zip(feat_names, vals), label=0, lat=rlat, lon=rlon, name="Background"))
 
-    # 2. Pseudo-negatives (Positive-Unlabeled learning)
-    # Mask out buffer of ~5km (approx 5 pixels) around positives
-    buffer_mask = np.zeros((height, width), dtype=bool)
-    for r, c in zip(pos_rows, pos_cols):
-        r_min, r_max = max(0, r - 5), min(height, r + 6)
-        c_min, c_max = max(0, c - 5), min(width, c + 6)
-        buffer_mask[r_min:r_max, c_min:c_max] = True
+    df_neg_samples = pd.DataFrame(neg_rows)
+    print(f"Background training points sampled: {len(df_neg_samples)}")
 
-    neg_r_candidates, neg_c_candidates = np.where(~buffer_mask)
-    rng = np.random.default_rng(42)
-    # Sample ~4x pseudo-negatives relative to positives
-    neg_idx = rng.choice(len(neg_r_candidates), size=len(pos_rows) * 4, replace=False)
-    neg_rows = neg_r_candidates[neg_idx]
-    neg_cols = neg_c_candidates[neg_idx]
+    df_train = pd.concat([df_pos_samples, df_neg_samples], ignore_index=True)
 
-    # Combine into dataset
-    all_rows = np.concatenate([pos_rows, neg_rows])
-    all_cols = np.concatenate([pos_cols, neg_cols])
-    y = np.concatenate([np.ones(len(pos_rows)), np.zeros(len(neg_rows))])
-
-    # Extract features at points
-    X_list = []
-    for f_idx in range(len(feat_names)):
-        X_list.append(stack[f_idx, all_rows, all_cols])
-    X = np.stack(X_list, axis=1)
-
-    # Coordinates for spatial blocking
-    lons, lats = rasterio.transform.xy(trans, all_rows, all_cols)
-    lons = np.array(lons)
-    lats = np.array(lats)
-
-    df_train = pd.DataFrame(X, columns=feat_names)
-    df_train["lon"] = lons
-    df_train["lat"] = lats
-    df_train["label"] = y
-    df_train["block"] = (df_train["lon"] // 0.2).astype(int).astype(str) + "_" + (df_train["lat"] // 0.2).astype(int).astype(str)
-
-    print(f"Dataset: {len(df_train)} samples ({int(y.sum())} positives, {int((1-y).sum())} pseudo-negatives).")
-    print(f"Spatial blocks: {df_train['block'].nunique()} blocks.")
+    # 3. Create Spatial Blocks for CV (to prevent spatial autocorrelation leakage)
+    block_size = 0.25 # ~28 km spatial blocks
+    df_train["block_y"] = np.floor((df_train.lat - 21.0) / block_size).astype(int)
+    df_train["block_x"] = np.floor((df_train.lon - 78.5) / block_size).astype(int)
+    df_train["block"] = df_train["block_y"].astype(str) + "_" + df_train["block_x"].astype(str)
 
     # Spatial Block CV
     gkf = GroupKFold(n_splits=5)
@@ -123,9 +122,9 @@ def main():
 
     for tr, va in gkf.split(df_train, df_train.label, df_train.block):
         clf = lgb.LGBMClassifier(
-            n_estimators=150,
-            learning_rate=0.04,
-            num_leaves=15,
+            n_estimators=180,
+            learning_rate=0.03,
+            num_leaves=18,
             subsample=0.8,
             colsample_bytree=0.8,
             class_weight="balanced",
@@ -149,9 +148,9 @@ def main():
 
     # Fit full model
     final_model = lgb.LGBMClassifier(
-        n_estimators=150,
-        learning_rate=0.04,
-        num_leaves=15,
+        n_estimators=180,
+        learning_rate=0.03,
+        num_leaves=18,
         subsample=0.8,
         colsample_bytree=0.8,
         class_weight="balanced",

@@ -64,12 +64,19 @@ def test_actions_list_and_refresh():
     assert isinstance(res.json(), list)
 
 
-def test_prospectivity_meta():
+def test_prospectivity_meta_and_deposits():
     res = client.get("/api/v1/prospectivity/meta")
     assert res.status_code == 200
     data = res.json()
     assert "tiles" in data
     assert "bounds" in data
+
+    res_dep = client.get("/api/v1/prospectivity/deposits")
+    assert res_dep.status_code == 200
+    deps = res_dep.json()
+    assert len(deps) > 0
+    assert "dep_id" in deps[0]
+    assert "site_name" in deps[0]
 
 
 def test_drillhole_csv_ingest_and_deduplication():

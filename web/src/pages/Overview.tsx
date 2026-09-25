@@ -15,10 +15,12 @@ const HEAD = "text-[10px] uppercase tracking-[0.15em] text-neutral-500";
 export default function Overview() {
   const { mine, horizon, sim, setMine, setHorizon, setSim } = useStore();
   const [showProsp, setShowProsp] = useState(true);
+  const [showDeposits, setShowDeposits] = useState(true);
   const [showDrillholes, setShowDrillholes] = useState(false);
   const [basemap, setBasemap] = useState<BasemapMode>("black");
 
   const mines = useQuery({ queryKey: ["mines"], queryFn: api.mines, refetchInterval: 60_000 });
+  const deposits = useQuery({ queryKey: ["deposits"], queryFn: api.deposits, retry: false });
   const drillholes = useQuery({ queryKey: ["drillholes"], queryFn: api.drillholes, retry: false });
   const risk = useQuery({ queryKey: ["risk", mine, horizon], queryFn: () => api.risk(mine, horizon), enabled: !!mine });
   const reserve = useQuery({ queryKey: ["reserve", mine], queryFn: () => api.reserves(mine), enabled: !!mine, retry: false });
@@ -71,9 +73,21 @@ export default function Overview() {
             <input type="checkbox" checked={showProsp} onChange={(e) => setShowProsp(e.target.checked)}
               className="accent-neutral-400" /> Prospectivity
           </label>
+          <label className="flex items-center gap-1.5 text-sm text-neutral-400" title="83 regional manganese deposits from USGS MRDS & GSI">
+            <input type="checkbox" checked={showDeposits} onChange={(e) => setShowDeposits(e.target.checked)}
+              className="accent-sky-400" />
+            <span className="flex items-center gap-1">
+              <span className="inline-block h-2 w-2 rounded-full bg-sky-400"></span>
+              MRDS Deposits
+            </span>
+          </label>
           <label className="flex items-center gap-1.5 text-sm text-neutral-400">
             <input type="checkbox" checked={showDrillholes} onChange={(e) => setShowDrillholes(e.target.checked)}
-              className="accent-neutral-400" /> Drill holes
+              className="accent-purple-400" />
+            <span className="flex items-center gap-1">
+              <span className="inline-block h-2 w-2 rounded-full bg-purple-400"></span>
+              Drill holes
+            </span>
           </label>
           <div className="flex border border-neutral-800">
             <button
@@ -127,6 +141,8 @@ export default function Overview() {
               basemap={basemap}
               drillholes={drillholes.data}
               showDrillholes={showDrillholes}
+              deposits={deposits.data}
+              showDeposits={showDeposits}
             />
           )}
         </section>

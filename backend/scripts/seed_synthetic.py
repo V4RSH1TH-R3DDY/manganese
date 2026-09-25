@@ -116,6 +116,7 @@ def main(storm: bool, real_weather: bool = False):
         ops = "app/ml/synth.py" + (", driven by real ERA5 rainfall" if real_weather else "")
         for src in ("production", "equipment", "blasts"):
             set_provenance(db, src, "synthetic", ops)
+        set_provenance(db, "drillholes", "synthetic", "synthetic Gaussian orebody drillholes")
     print("seeded. next: python -m scripts.train_all")
 
 

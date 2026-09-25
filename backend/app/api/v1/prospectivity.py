@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 import warnings
 import morecantile
@@ -9,6 +10,7 @@ from rasterio.warp import Resampling, reproject, transform_bounds
 from fastapi import APIRouter, HTTPException, Request, Response
 
 from app.core.config import settings
+from app.schemas import DepositPoint
 
 # Suppress NotGeoreferencedWarning for in-memory PNG tile serialization
 warnings.filterwarnings("ignore", category=NotGeoreferencedWarning)
@@ -40,6 +42,36 @@ def meta(request: Request):
         "tiles": tiles,
         "bounds": [round(x, 4) for x in b]
     }
+
+
+@router.get("/deposits", response_model=list[DepositPoint])
+def get_deposits():
+    candidates = [
+        Path("data/deposits.json"),
+        Path("/data/deposits.json"),
+        Path("../data/deposits.json"),
+    ]
+    for p in candidates:
+        if p.exists():
+            with open(p) as f:
+                raw = json.load(f)
+            return [
+                DepositPoint(
+                    dep_id=d.get("dep_id", ""),
+                    site_name=d.get("site_name", "Unknown"),
+                    latitude=float(d["latitude"]),
+                    longitude=float(d["longitude"]),
+                    state=d.get("state", ""),
+                    dev_stat=d.get("dev_stat"),
+                    oper_type=d.get("oper_type"),
+                    ore=d.get("ore"),
+                    gangue=d.get("gangue"),
+                    host_rock=d.get("host_rock"),
+                )
+                for d in raw
+                if d.get("latitude") is not None and d.get("longitude") is not None
+            ]
+    return []
 
 
 @router.api_route("/tiles/{z}/{x}/{y}.png", methods=["GET", "HEAD"])

@@ -76,6 +76,19 @@ class DrillHolePoint(BaseModel):
     collar_z: float
 
 
+class DepositPoint(BaseModel):
+    dep_id: str
+    site_name: str
+    latitude: float
+    longitude: float
+    state: str
+    dev_stat: str | None = None
+    oper_type: str | None = None
+    ore: str | None = None
+    gangue: str | None = None
+    host_rock: str | None = None
+
+
 class IngestResponse(BaseModel):
     kind: str
     rows: int

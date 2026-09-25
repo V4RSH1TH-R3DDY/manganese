@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import maplibregl from "maplibre-gl";
 import type { GeoJSONSource, Map as MapLibreMap } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import type { DrillHolePoint, MineSummary } from "../lib/api";
+import type { DepositPoint, DrillHolePoint, MineSummary } from "../lib/api";
 import { fmtT } from "../lib/format";
 
 export type BasemapMode = "black" | "satellite" | "streets";
@@ -14,6 +14,8 @@ interface Props {
   basemap?: BasemapMode;
   drillholes?: DrillHolePoint[];
   showDrillholes?: boolean;
+  deposits?: DepositPoint[];
+  showDeposits?: boolean;
 }
 const COLOR = ["match", ["get", "level"], "red", "#ef4444", "amber", "#f59e0b", "#22c55e"] as any;
 
@@ -31,6 +33,7 @@ const CARTO_DARK_ATTRIB = '&copy; <a href="https://www.openstreetmap.org/copyrig
 export default function MapView({
   mines, selected, onSelect, prospectivity, showProsp, basemap = "black",
   drillholes, showDrillholes = false,
+  deposits, showDeposits = true,
 }: Props) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<MapLibreMap | null>(null);
@@ -84,12 +87,73 @@ export default function MapView({
       if (!m.getSource("prosp")) {
         m.addSource("prosp", { type: "raster", tiles: [prospectivity.tiles], tileSize: 256, bounds: prospectivity.bounds });
         m.addLayer({ id: "prosp", type: "raster", source: "prosp", paint: { "raster-opacity": 0.75 } },
-          m.getLayer("mines-halo") ? "mines-halo" : undefined);
+          m.getLayer("deposits-dot") ? "deposits-dot" : (m.getLayer("mines-halo") ? "mines-halo" : undefined));
       }
       m.setLayoutProperty("prosp", "visibility", showProsp ? "visible" : "none");
     };
     m.isStyleLoaded() ? apply() : m.once("load", apply);
   }, [prospectivity, showProsp]);
+
+  useEffect(() => {                                            // deposits layer (MRDS/GSI)
+    const m = map.current; if (!m || !deposits) return;
+    const depFc: any = {
+      type: "FeatureCollection",
+      features: deposits.map((d) => ({
+        type: "Feature",
+        geometry: { type: "Point", coordinates: [d.longitude, d.latitude] },
+        properties: {
+          id: d.dep_id,
+          name: d.site_name,
+          state: d.state,
+          dev: d.dev_stat || "Occurrence",
+          ore: d.ore || "Manganese ore",
+          gangue: d.gangue || "Quartz",
+          rock: d.host_rock || "Gondite / Metasedimentary",
+        },
+      })),
+    };
+    const apply = () => {
+      const src = m.getSource("deposits") as GeoJSONSource | undefined;
+      if (src) {
+        src.setData(depFc);
+      } else {
+        m.addSource("deposits", { type: "geojson", data: depFc });
+        m.addLayer({
+          id: "deposits-dot",
+          type: "circle",
+          source: "deposits",
+          paint: {
+            "circle-radius": 4.5,
+            "circle-color": "#38bdf8",
+            "circle-stroke-color": "#0369a1",
+            "circle-stroke-width": 1.2,
+            "circle-opacity": 0.85,
+          },
+        });
+        m.on("click", "deposits-dot", (e) => {
+          const p = e.features![0].properties as any;
+          new maplibregl.Popup({ closeButton: false })
+            .setLngLat((e.features![0].geometry as any).coordinates)
+            .setHTML(
+              `<div class="p-1 text-xs leading-relaxed">` +
+              `<strong class="text-sm font-semibold text-sky-400">${p.name}</strong><br/>` +
+              `<span class="text-neutral-400">Status:</span> ${p.dev} (${p.state})<br/>` +
+              `<span class="text-neutral-400">Ore:</span> ${p.ore}<br/>` +
+              (p.rock ? `<span class="text-neutral-400">Host rock:</span> ${p.rock}<br/>` : "") +
+              (p.gangue ? `<span class="text-neutral-400">Gangue:</span> ${p.gangue}` : "") +
+              `</div>`
+            )
+            .addTo(m);
+        });
+        m.on("mouseenter", "deposits-dot", () => (m.getCanvas().style.cursor = "pointer"));
+        m.on("mouseleave", "deposits-dot", () => (m.getCanvas().style.cursor = ""));
+      }
+      if (m.getLayer("deposits-dot")) {
+        m.setLayoutProperty("deposits-dot", "visibility", showDeposits ? "visible" : "none");
+      }
+    };
+    m.isStyleLoaded() ? apply() : m.once("load", apply);
+  }, [deposits, showDeposits]);
 
   useEffect(() => {                                            // drillhole markers
     const m = map.current; if (!m || !drillholes) return;
