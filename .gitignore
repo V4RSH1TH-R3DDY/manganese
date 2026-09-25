@@ -1,13 +1,36 @@
 .env
+
+# python
 __pycache__/
 *.pyc
 .pytest_cache/
 .venv/
+venv/
+
+# node
 node_modules/
 dist/
+
+# model artifacts (regenerate: make train / scripts/train_prospectivity.py)
 backend/artifacts/*.joblib
+artifacts/*.joblib
+
+# derived + downloaded data (see data/README.md to re-fetch)
 data/raw/*
 data/features/*
 data/interim/*
 data/cogs/*
+data/*.tif
+data/*.json
+data/*.txt
 !data/**/.gitkeep
+!data/README.md
+
+# local runtime state (regenerate: make seed)
+*.db
+*.db.bak
+*.log
+
+# tooling
+.playwright-mcp/
+.serena/

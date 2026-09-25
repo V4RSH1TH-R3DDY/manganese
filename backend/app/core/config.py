@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     titiler_public_url: str = "http://localhost:8001"
     cors_origins: list[str] = ["*"]
     open_meteo_url: str = "https://api.open-meteo.com/v1/forecast"
+    open_meteo_archive_url: str = "https://archive-api.open-meteo.com/v1/archive"   # ERA5, keyless
     data_mode: str = "demo"          # demo = synthetic data, live = real feeds
     api_key: str = "change-me"       # protects /ingest and /actions/refresh
 

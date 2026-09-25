@@ -7,14 +7,19 @@ import ActionCard from "../components/ActionCard";
 import FanChart from "../components/FanChart";
 import { Drivers, LossSplit, QueryError } from "../components/Insights";
 import Kpi from "../components/Kpi";
-import MapView from "../components/MapView";
+import MapView, { type BasemapMode } from "../components/MapView";
 import RiskBadge from "../components/RiskBadge";
+
+const HEAD = "text-[10px] uppercase tracking-[0.15em] text-neutral-500";
 
 export default function Overview() {
   const { mine, horizon, sim, setMine, setHorizon, setSim } = useStore();
   const [showProsp, setShowProsp] = useState(true);
+  const [showDrillholes, setShowDrillholes] = useState(false);
+  const [basemap, setBasemap] = useState<BasemapMode>("black");
 
   const mines = useQuery({ queryKey: ["mines"], queryFn: api.mines, refetchInterval: 60_000 });
+  const drillholes = useQuery({ queryKey: ["drillholes"], queryFn: api.drillholes, retry: false });
   const risk = useQuery({ queryKey: ["risk", mine, horizon], queryFn: () => api.risk(mine, horizon), enabled: !!mine });
   const reserve = useQuery({ queryKey: ["reserve", mine], queryFn: () => api.reserves(mine), enabled: !!mine, retry: false });
   const actions = useQuery({ queryKey: ["actions", mine], queryFn: () => api.actions(mine), enabled: !!mine });
@@ -46,8 +51,8 @@ export default function Overview() {
   return (
     <div className="space-y-4">
       {redMines.length > 0 && (
-        <div className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm text-red-200">
-          ⚠ High shortfall risk this week: <b>{redMines.map((m) => m.name).join(", ")}</b>
+        <div className="border border-red-500/40 bg-red-500/5 px-4 py-2 text-sm text-red-300">
+          High shortfall risk this week: <b className="font-medium">{redMines.map((m) => m.name).join(", ")}</b>
         </div>
       )}
 
@@ -56,35 +61,84 @@ export default function Overview() {
       <div className="flex flex-wrap items-center gap-2 print:hidden">
         {mines.data?.map((m) => (
           <button key={m.code} onClick={() => setMine(m.code)}
-            className={`flex items-center gap-2 rounded-full border px-3 py-1 text-sm ${mine === m.code ? "border-sky-400 bg-sky-400/10" : "border-slate-700 hover:border-slate-500"}`}>
-            <span className="h-2 w-2 rounded-full" style={{ background: LEVEL_HEX[m.level] }} />{m.name}
+            className={`flex items-center gap-2 border px-3 py-1 text-sm ${mine === m.code
+              ? "border-neutral-400 text-neutral-100" : "border-neutral-800 text-neutral-400 hover:border-neutral-600"}`}>
+            <span className="h-1.5 w-1.5" style={{ background: LEVEL_HEX[m.level] }} />{m.name}
           </button>
         ))}
         <div className="ml-auto flex items-center gap-2">
-          <label className="flex items-center gap-1 text-sm text-slate-400">
-            <input type="checkbox" checked={showProsp} onChange={(e) => setShowProsp(e.target.checked)} /> Prospectivity
+          <label className="flex items-center gap-1.5 text-sm text-neutral-400">
+            <input type="checkbox" checked={showProsp} onChange={(e) => setShowProsp(e.target.checked)}
+              className="accent-neutral-400" /> Prospectivity
           </label>
+          <label className="flex items-center gap-1.5 text-sm text-neutral-400">
+            <input type="checkbox" checked={showDrillholes} onChange={(e) => setShowDrillholes(e.target.checked)}
+              className="accent-neutral-400" /> Drill holes
+          </label>
+          <div className="flex border border-neutral-800">
+            <button
+              onClick={() => setBasemap("black")}
+              className={`px-2.5 py-1 text-xs transition-colors ${
+                basemap === "black" ? "bg-neutral-800 text-white font-medium" : "text-neutral-400 hover:text-neutral-200"
+              }`}
+            >
+              ⬛ Black
+            </button>
+            <button
+              onClick={() => setBasemap("satellite")}
+              className={`border-l border-neutral-800 px-2.5 py-1 text-xs transition-colors ${
+                basemap === "satellite" ? "bg-neutral-800 text-white font-medium" : "text-neutral-400 hover:text-neutral-200"
+              }`}
+            >
+              🛰 Satellite
+            </button>
+            <button
+              onClick={() => setBasemap("streets")}
+              className={`border-l border-neutral-800 px-2.5 py-1 text-xs transition-colors ${
+                basemap === "streets" ? "bg-neutral-800 text-white font-medium" : "text-neutral-400 hover:text-neutral-200"
+              }`}
+            >
+              🗺 Streets
+            </button>
+          </div>
           {([7, 14] as const).map((h) => (
             <button key={h} onClick={() => setHorizon(h)}
-              className={`rounded-lg px-3 py-1 text-sm ${horizon === h ? "bg-sky-500 text-slate-950" : "bg-slate-800 text-slate-300"}`}>{h}d</button>
+              className={`border px-3 py-1 text-sm ${horizon === h
+                ? "border-neutral-400 text-neutral-100" : "border-neutral-800 text-neutral-400 hover:border-neutral-600"}`}>
+              {h}d
+            </button>
           ))}
-          <button onClick={() => window.print()} className="rounded-lg bg-slate-800 px-3 py-1 text-sm text-slate-300 hover:bg-slate-700">Export brief</button>
+          <button onClick={() => window.print()}
+            className="border border-neutral-800 px-3 py-1 text-sm text-neutral-400 hover:border-neutral-600">
+            Export brief
+          </button>
         </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-12">
-        <section className="lg:col-span-7 print:hidden">
-          {mines.data && <MapView mines={mines.data} selected={mine} onSelect={setMine} prospectivity={prosp.data} showProsp={showProsp} />}
+        <section className="lg:col-span-8 print:hidden">
+          {mines.data && (
+            <MapView
+              mines={mines.data}
+              selected={mine}
+              onSelect={setMine}
+              prospectivity={prosp.data}
+              showProsp={showProsp}
+              basemap={basemap}
+              drillholes={drillholes.data}
+              showDrillholes={showDrillholes}
+            />
+          )}
         </section>
-        <section className="space-y-3 lg:col-span-5">
+        <section className="space-y-3 lg:col-span-4">
           <div className="flex items-center gap-2">
-            <h2 className="text-lg font-semibold">{mines.data?.find((m) => m.code === mine)?.name ?? "…"}</h2>
+            <h2 className="text-base font-medium">{mines.data?.find((m) => m.code === mine)?.name ?? "…"}</h2>
             {r && <RiskBadge level={r.level} />}
           </div>
           <QueryError error={risk.error} what="risk forecast" />
           <div className="grid grid-cols-2 gap-3">
             <Kpi label="Expected shortfall" value={r ? `${r.expected_shortfall_pct.toFixed(1)}%` : "…"}
-                 sub={`next ${horizon} days`} tone={sim ? "text-emerald-300" : "text-amber-300"} />
+                 sub={`next ${horizon} days`} tone={sim ? "text-emerald-400" : "text-amber-400"} />
             <Kpi label="Tonnes at risk" value={r ? fmtT(r.expected_loss_t) : "…"} sub="vs plan" />
             <Kpi label="P(shortfall > 10%)" value={risk.data ? `${Math.round(risk.data.p_shortfall * 100)}%` : "…"} />
             <Kpi label="Reserve P50" value={reserve.data ? fmtT(reserve.data.p50_t) : "n/a"}
@@ -96,22 +150,25 @@ export default function Overview() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-12">
-        <section className="rounded-2xl border border-slate-800 bg-slate-900/40 p-4 lg:col-span-7">
+        <section className="border border-neutral-800 p-4 lg:col-span-7">
           <div className="mb-2 flex items-center justify-between">
-            <h3 className="font-semibold">Production forecast</h3>
+            <h3 className={HEAD}>Production forecast</h3>
             {sim && (
-              <div className="flex items-center gap-2 text-sm text-emerald-300">
+              <div className="flex items-center gap-2 text-xs text-emerald-400">
                 What-if active · +{fmtT(recovered)} recovered
-                <button onClick={() => setSim(null)} className="rounded bg-slate-800 px-2 py-0.5 text-slate-300">Reset</button>
+                <button onClick={() => setSim(null)}
+                  className="border border-neutral-700 px-2 py-0.5 text-neutral-400 hover:border-neutral-500">
+                  Reset
+                </button>
               </div>
             )}
           </div>
-          {risk.data ? <FanChart band={risk.data.band} after={sim?.band} /> : <div className="h-80 animate-pulse rounded bg-slate-800/50" />}
+          {risk.data ? <FanChart band={risk.data.band} after={sim?.band} /> : <div className="h-80 animate-pulse bg-neutral-900" />}
         </section>
         <section className="space-y-3 lg:col-span-5">
-          <h3 className="font-semibold">Recommended actions</h3>
+          <h3 className={HEAD}>Recommended actions</h3>
           <QueryError error={actions.error} what="actions" />
-          {actions.data?.length === 0 && <p className="text-sm text-slate-500">No action needed: forecast within plan.</p>}
+          {actions.data?.length === 0 && <p className="text-sm text-neutral-500">No action needed: forecast within plan.</p>}
           {actions.data?.map((a) => <ActionCard key={a.id} a={a} horizon={horizon} onResult={setSim} />)}
         </section>
       </div>

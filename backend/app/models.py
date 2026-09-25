@@ -7,6 +7,7 @@ from sqlalchemy import (
     JSON,
     Boolean,
     Date,
+    DateTime,
     Float,
     ForeignKey,
     String,
@@ -114,6 +115,21 @@ class ReserveEstimate(Base):
     cutoff: Mapped[float] = mapped_column(Float)
     grade_hist_x: Mapped[list[float]] = mapped_column(JSON, default=list)
     grade_hist_y: Mapped[list[float]] = mapped_column(JSON, default=list)
+
+
+class DataProvenance(Base):
+    """Per-source record of where the data actually came from.
+
+    Drives the honesty badge in the UI. A single DATA_MODE flag is not enough:
+    weather can be live while ops data is still synthetic, and claiming
+    otherwise is the "overclaiming" risk called out in the build plan.
+    """
+
+    __tablename__ = "data_provenance"
+    source: Mapped[str] = mapped_column(String(24), primary_key=True)   # weather | production | equipment | blasts
+    mode: Mapped[str] = mapped_column(String(16))                       # synthetic | live | uploaded
+    detail: Mapped[str] = mapped_column(String(200), default="")
+    updated_at: Mapped[dt.datetime] = mapped_column(DateTime)
 
 
 class Action(Base):

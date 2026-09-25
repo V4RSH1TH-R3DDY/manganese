@@ -9,12 +9,25 @@ import numpy as np
 import pandas as pd
 
 
-def simulate(days: pd.DatetimeIndex, plan: float, opencast: bool, seed: int) -> pd.DataFrame:
+def simulate(days: pd.DatetimeIndex, plan: float, opencast: bool, seed: int,
+             rain: np.ndarray | None = None) -> pd.DataFrame:
+    """If `rain` is given (e.g. real ERA5 rainfall) it drives the simulation
+    instead of the synthetic gamma draws.
+
+    Production must be generated *from* whatever rainfall series is used. Swapping
+    real rain in beside a production series that was generated from synthetic rain
+    would sever the rain -> output link the shortfall model is meant to learn.
+    """
     rng = np.random.default_rng(seed)
     n = len(days)
     doy = days.dayofyear.values
     monsoon = np.exp(-((doy - 215) / 40) ** 2)
-    rain = rng.gamma(0.4, 1, n) * (2 + 45 * monsoon)
+    if rain is None:
+        rain = rng.gamma(0.4, 1, n) * (2 + 45 * monsoon)
+    else:
+        rain = np.asarray(rain, dtype=float)
+        if len(rain) != n:
+            raise ValueError(f"rain has {len(rain)} rows, expected {n}")
 
     avail = np.full(n, 0.93)                                   # breakdown episodes last 3-10 days
     for i in np.where(rng.random(n) < 0.03)[0]:

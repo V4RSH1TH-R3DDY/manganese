@@ -13,11 +13,23 @@ from sqlalchemy.orm import Session
 
 from app.models import Mine, ReserveEstimate
 
+# Project lon/lat to local metric coordinates taking latitude into account:
+# 1 deg lat ≈ 110,574 m; 1 deg lon ≈ 111,320 * cos(lat) m
 SQL = text("""
-SELECT h.collar_lon * 111000 AS x, h.collar_lat * 111000 AS y,
-       h.collar_z - (a.from_m + a.to_m) / 2 AS z, a.mn_pct AS g
+SELECT (h.collar_lon * 111320.0 * cos(radians(h.collar_lat))) AS x,
+       (h.collar_lat * 110574.0) AS y,
+       h.collar_z - (a.from_m + a.to_m) / 2 AS z,
+       a.mn_pct AS g
 FROM assays a JOIN drillholes h ON h.id = a.hole_id WHERE h.mine_id = :m
-""")   
+""")
+
+
+def latest_reserve(db: Session, mine: Mine) -> ReserveEstimate | None:
+    return db.scalars(
+        select(ReserveEstimate)
+        .where(ReserveEstimate.mine_id == mine.id)
+        .order_by(ReserveEstimate.computed_on.desc())
+    ).first()
 
 
 def estimate_reserve(db: Session, mine: Mine, cutoff=25.0, density=3.6, n_sim=200, seed=0):
@@ -43,17 +55,19 @@ def estimate_reserve(db: Session, mine: Mine, cutoff=25.0, density=3.6, n_sim=20
     
     hist_y, hist_edges = np.histogram(ore, bins=10, range=(cutoff, max(cutoff + 10, ore.max() if ore.size else cutoff + 10)))
     hist_x = [float((hist_edges[i] + hist_edges[i+1])/2) for i in range(len(hist_y))]
-    hist_y = [float(y * vol * density) for y in hist_y]
-    
-    est = ReserveEstimate(mine_id=mine.id, computed_on=dt.date.today(), p10_t=float(p10), p50_t=float(p50),
-                          p90_t=float(p90), mean_grade=float(ore.mean()) if ore.size else 0.0, cutoff=cutoff,
-                          grade_hist_x=hist_x, grade_hist_y=hist_y)
+    # Scale hist_y from voxel count to approximate tonnes
+    hist_y = [float(count * vol * density) for count in hist_y]
 
-    db.add(est)
+    r = db.scalars(select(ReserveEstimate).where(ReserveEstimate.mine_id == mine.id)).first()
+    if not r:
+        r = ReserveEstimate(mine_id=mine.id)
+        db.add(r)
+    r.computed_on = dt.date.today()
+    r.p10_t, r.p50_t, r.p90_t = float(p10), float(p50), float(p90)
+    r.mean_grade = float(ore.mean()) if len(ore) else float(cutoff)
+    r.cutoff = float(cutoff)
+    r.grade_hist_x = hist_x
+    r.grade_hist_y = hist_y
     db.commit()
-    return est
-
-
-def latest_reserve(db: Session, mine: Mine):
-    return db.scalars(select(ReserveEstimate).where(ReserveEstimate.mine_id == mine.id)
-                      .order_by(ReserveEstimate.computed_on.desc(), ReserveEstimate.id.desc())).first()
+    db.refresh(r)
+    return r

@@ -1,10 +1,15 @@
 import type { Level } from "../lib/api";
 
 const C: Record<Level, string> = {
-  green: "bg-emerald-500/15 text-emerald-300 ring-emerald-500/40",
-  amber: "bg-amber-500/15 text-amber-300 ring-amber-500/40",
-  red: "bg-red-500/15 text-red-300 ring-red-500/40",
+  green: "border-emerald-500/60 text-emerald-400",
+  amber: "border-amber-500/60 text-amber-400",
+  red: "border-red-500/60 text-red-400",
 };
+
 export default function RiskBadge({ level }: { level: Level }) {
-  return <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase ring-1 ${C[level]}`}>{level}</span>;
+  return (
+    <span className={`border px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.15em] ${C[level]}`}>
+      {level}
+    </span>
+  );
 }

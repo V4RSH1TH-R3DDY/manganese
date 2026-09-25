@@ -66,3 +66,20 @@ class MineSummary(BaseModel):
     level: Level
     expected_shortfall_pct: float
     reserve_p50_t: float | None
+
+
+class DrillHolePoint(BaseModel):
+    id: int
+    mine_code: str
+    lat: float
+    lon: float
+    collar_z: float
+
+
+class IngestResponse(BaseModel):
+    kind: str
+    rows: int
+    date_min: str
+    date_max: str
+    rows_holes: int | None = None
+    rows_assays: int | None = None

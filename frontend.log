@@ -1,9 +1,0 @@
-npm notice run moil-copilot-web@0.0.0 dev
-npm notice run vite --host 0.0.0.0 --port 5173
-
-  VITE v7.3.6  ready in 188 ms
-
-  ➜  Local:   http://localhost:5173/
-  ➜  Network: http://192.168.0.13:5173/
-7:06:54 PM [vite] .env changed, restarting server...
-7:06:55 PM [vite] server restarted.

@@ -15,22 +15,37 @@ export default function Ingest() {
   const upload = async (f?: File) => {
     if (!f) return;
     setMsg("Uploading…");
-    try { const r = await api.ingest(kind, f); setMsg(`✓ ${r.rows} rows loaded (${r.date_min} → ${r.date_max}). Forecasts refreshed.`); }
-    catch (e) { setMsg(`✗ ${(e as Error).message}`); }
+    try {
+      const r = await api.ingest(kind, f);
+      if (kind === "drillholes") {
+        setMsg(`${r.rows} assay intervals loaded (${r.rows_holes ?? "N/A"} drill holes). Model data ready.`);
+      } else {
+        setMsg(`${r.rows} rows loaded (${r.date_min} → ${r.date_max}). Forecasts refreshed.`);
+      }
+    } catch (e) {
+      setMsg(`Failed: ${(e as Error).message}`);
+    }
   };
   return (
     <div className="max-w-2xl space-y-4">
-      <h2 className="text-lg font-semibold">Data adapter: bring your own MOIL data</h2>
-      <select value={kind} onChange={(e) => setKind(e.target.value as any)} className="rounded bg-slate-800 px-3 py-2">
-        {Object.keys(KINDS).map((k) => <option key={k}>{k}</option>)}
+      <h2 className="text-base font-medium">Data adapter <span className="text-neutral-500">bring your own MOIL data</span></h2>
+
+      <select value={kind} onChange={(e) => setKind(e.target.value as any)}
+        className="border border-neutral-800 bg-transparent px-3 py-2 text-sm text-neutral-200">
+        {Object.keys(KINDS).map((k) => <option key={k} className="bg-neutral-900">{k}</option>)}
       </select>
-      <p className="text-sm text-slate-400">Required columns: <code className="text-sky-300">{KINDS[kind]}</code></p>
+
+      <p className="text-sm text-neutral-500">
+        Required columns: <code className="text-neutral-300">{KINDS[kind]}</code>
+      </p>
+
       <label onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); upload(e.dataTransfer.files[0]); }}
-        className="flex h-40 cursor-pointer items-center justify-center rounded-2xl border-2 border-dashed border-slate-600 text-slate-400 hover:border-sky-400">
+        className="flex h-40 cursor-pointer items-center justify-center border border-dashed border-neutral-700 text-sm text-neutral-500 hover:border-neutral-500 hover:text-neutral-300">
         Drop CSV here or click to choose
         <input type="file" accept=".csv" hidden onChange={(e) => upload(e.target.files?.[0])} />
       </label>
-      {msg && <p className="text-sm">{msg}</p>}
+
+      {msg && <p className="border border-neutral-800 px-3 py-2 text-sm text-neutral-300">{msg}</p>}
     </div>
   );
 }

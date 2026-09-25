@@ -13,8 +13,9 @@ router = APIRouter(prefix="/reserves", tags=["reserves"])
 
 def _out(m: Mine, e) -> ReserveOut:
     return ReserveOut(mine=m.code, p10_t=e.p10_t, p50_t=e.p50_t, p90_t=e.p90_t,
-                      mean_grade=e.mean_grade, cutoff=e.cutoff, grade_hist_x=e.grade_hist_x or [],
-                      grade_hist_y=e.grade_hist_y or [], computed_on=e.computed_on)
+                      mean_grade=e.mean_grade, cutoff=e.cutoff,
+                      grade_hist_x=e.grade_hist_x or [], grade_hist_y=e.grade_hist_y or [],
+                      computed_on=e.computed_on)
 
 
 @router.get("/{code}", response_model=ReserveOut)

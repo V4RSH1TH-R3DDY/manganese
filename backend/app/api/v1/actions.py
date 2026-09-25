@@ -26,9 +26,12 @@ def list_actions(mine: str | None = None, db: Session = Depends(get_db)):
     return [_out(a, c) for a, c in db.execute(q)]
 
 
-@router.post("/refresh", dependencies=[Depends(require_key)])
+@router.post("/refresh", response_model=list[ActionOut], dependencies=[Depends(require_key)])
 def refresh(db: Session = Depends(get_db)):
-    return {"actions": generate_all(db)}
+    generate_all(db)
+    q = (select(Action, Mine.code).join(Mine, Mine.id == Action.mine_id)
+         .where(Action.status == "open").order_by(Action.expected_tonnes.desc()))
+    return [_out(a, c) for a, c in db.execute(q)]
 
 
 @router.post("/{action_id}/simulate", response_model=RiskOut)

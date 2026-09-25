@@ -14,6 +14,15 @@ from sqlalchemy import func, text
 from app import models as M
 from app.core.db import Base, SessionLocal, engine
 from app.ml.synth import simulate
+from app.services.db_utils import set_provenance
+from app.services.weather_service import real_rain_series
+
+# The scripted storm hits only the Nagpur-Bhandara cluster, not Balaghat ~100 km
+# east. A localised storm is both more realistic than a region-wide one and the
+# thing that makes the demo work: it opens a weather gap between the storm-hit
+# mines and Balaghat, which is what drives the redeploy optimiser to move a
+# healthy unit into the slot left by Balaghat's broken dumper.
+STORM_MINES = {"KDR", "MNS", "DBZ"}
 
 MINES = [("KDR", "Kandri", "underground", 21.416, 79.266, 300),
          ("MNS", "Mansar", "underground", 21.383, 79.250, 333),
@@ -38,7 +47,7 @@ def seed_drillholes(db, mine, rng):
                                mn_pct=float(np.clip(g + rng.normal(0, 1.5), 0.5, 55))))
 
 
-def main(storm: bool):
+def main(storm: bool, real_weather: bool = False):
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)         # demo reset
     today = dt.date.today()
@@ -49,10 +58,18 @@ def main(storm: bool):
             mine = M.Mine(code=code, name=name, method=method, lat=lat, lon=lon, plan_tpd=plan)
             db.add(mine)
             db.commit()      # commit before the to_sql writes below: they use a separate connection
-            d = simulate(days, plan, method == "opencast", seed=i)
-            if storm:                                                # scripted demo storm: D+3..D+5
+            rain = None
+            if real_weather:
+                rain = real_rain_series(lon=lon, lat=lat, days=days)
+                print(f"  {code}: pulled {len(rain)} days of real rainfall")
+            d = simulate(days, plan, method == "opencast", seed=i, rain=rain)
+            if storm and code in STORM_MINES:                        # scripted demo storm: D+3..D+5
                 for k, mm in zip((3, 4, 5), (30, 55, 40)):
-                    d.loc[d.date == pd.Timestamp(today + dt.timedelta(days=k)), "rain"] += mm
+                    mask = d.date == pd.Timestamp(today + dt.timedelta(days=k))
+                    # Raise to the scenario level rather than adding to it: with
+                    # --real-weather the forecast may already be wet, and stacking
+                    # 125 mm on top of a real monsoon week is not defensible.
+                    d.loc[mask, "rain"] = np.maximum(d.loc[mask, "rain"], float(mm))
             hist = d[d.date <= pd.Timestamp(today)].reset_index(drop=True)
             pd.DataFrame({"mine_id": mine.id, "date": d.date.dt.date, "rain_mm": d.rain,
                           "is_forecast": d.date > pd.Timestamp(today)}).to_sql(
@@ -69,18 +86,44 @@ def main(storm: bool):
                 db.add(u)
                 db.commit()
                 av = np.clip(hist.avail + rng.normal(0, 0.03, len(hist)), 0.2, 1.0)
-                if code == "BLG" and k == 1:
-                    av.iloc[-1] = 0.3                              # force a broken unit today (redeploy demo)
+                if code == "BLG":
+                    # Pin the redeploy scenario: exactly one unit down at Balaghat
+                    # today. Forcing only the broken unit left the others at the
+                    # mercy of the RNG, and a breakdown episode on the last day
+                    # made all four look dead -- which produced an absurd
+                    # "redeploy 4 units" recommendation.
+                    av.iloc[-1] = 0.30 if k == 1 else max(float(av.iloc[-1]), 0.88)
                 pd.DataFrame({"mine_id": mine.id, "unit_code": u.code, "date": hist.date.dt.date,
                               "available_hours": 20 * av, "scheduled_hours": 20.0,
                               "breakdown": av < 0.7}).to_sql(
                     "equipment_daily", engine, if_exists="append", index=False, method="multi", chunksize=5000)
             seed_drillholes(db, mine, rng)
             db.commit()
+
+        # Record provenance per source, so the UI badge cannot silently claim
+        # any of this is real MOIL data.
+        if real_weather:
+            # Real history, but a scripted storm makes the forward window a
+            # scenario rather than a straight forecast. Say which it is.
+            wmode = "scenario" if storm else "live"
+            wdetail = "ERA5 archive + Open-Meteo forecast" + (
+                " + scripted storm overlay D+3..D+5" if storm else "")
+        else:
+            wmode = "synthetic"
+            wdetail = "app/ml/synth.py" + (" (+ scripted storm D+3..D+5)" if storm else "")
+        set_provenance(db, "weather", wmode, wdetail)
+
+        ops = "app/ml/synth.py" + (", driven by real ERA5 rainfall" if real_weather else "")
+        for src in ("production", "equipment", "blasts"):
+            set_provenance(db, src, "synthetic", ops)
     print("seeded. next: python -m scripts.train_all")
 
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("--storm", action="store_true")
-    main(ap.parse_args().storm)
+    ap.add_argument("--storm", action="store_true",
+                    help="overlay a scripted storm on D+3..D+5 for the demo")
+    ap.add_argument("--real-weather", action="store_true",
+                    help="drive the simulation with real ERA5 rainfall instead of synthetic draws")
+    a = ap.parse_args()
+    main(a.storm, a.real_weather)

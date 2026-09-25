@@ -1,9 +1,54 @@
 @import "tailwindcss";
+
 :root { color-scheme: dark; }
-body { background: #020617; color: #f1f5f9; font-family: ui-sans-serif, system-ui, sans-serif; }
-/* map popups: match the dark UI (default is white, which hid the inherited light text) */
-.maplibregl-popup-content { background: #0f172a; color: #e2e8f0; border: 1px solid #334155; border-radius: 10px;
-  padding: 8px 12px; font-size: 13px; line-height: 1.5; box-shadow: 0 8px 24px rgb(0 0 0 / 0.45); }
-.maplibregl-popup-anchor-bottom .maplibregl-popup-tip { border-top-color: #334155; }
-.maplibregl-popup-anchor-top .maplibregl-popup-tip { border-bottom-color: #334155; }
-@media print { body { background: #fff; color: #000; } }
+
+body {
+  background: #0a0a0a;
+  color: #e5e5e5;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
+
+/* MapLibre ships rounded controls and popups; square them so the map matches
+   the rest of the UI. */
+.maplibregl-ctrl-group,
+.maplibregl-ctrl-group button {
+  border-radius: 0 !important;
+  background: #0a0a0a;
+  color: #e5e5e5;
+  border-color: #262626;
+}
+.maplibregl-ctrl-group button + button { border-top: 1px solid #262626; }
+.maplibregl-ctrl-group button span { filter: invert(1); }
+
+.maplibregl-popup-content {
+  border-radius: 0 !important;
+  background: #0a0a0a;
+  color: #e5e5e5;
+  border: 1px solid #404040;
+  font-size: 12px;
+  padding: 8px 10px;
+  box-shadow: none;
+}
+.maplibregl-popup-tip { display: none; }
+
+.maplibregl-ctrl-attrib {
+  border-radius: 0 !important;
+  background: rgba(10, 10, 10, 0.75) !important;
+  color: #a3a3a3;
+}
+.maplibregl-ctrl-attrib a { color: #a3a3a3; }
+
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #111827 !important;
+  }
+  * {
+    color: #111827 !important;
+    border-color: #e5e7eb !important;
+    background-color: transparent !important;
+  }
+  .print\:hidden {
+    display: none !important;
+  }
+}
