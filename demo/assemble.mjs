@@ -1,6 +1,7 @@
 // Joins the five rendered segments into the full video and builds one voiceover subtitle file.
 //
-//   node assemble.mjs   -> out/full_1080p60.mp4 (+ _av1.mp4), out/full_voiceover.srt
+//   node assemble.mjs         -> out/full_1080p60.mp4 (+ _av1.mp4), out/full_voiceover.srt
+//   node assemble.mjs --srt   -> only rebuild the subtitles (after editing VO lines)
 //
 // Segments are read from their AV1 renders (decodable by any ffmpeg build) and trimmed to their
 // exact slot, so every VO line lands at the time written in the scripts.
@@ -13,16 +14,19 @@ import { fileURLToPath } from "node:url";
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const OUT = path.join(HERE, "out");
 const SEGMENTS = [                                             // file, slot length (s)
-  ["intro_1080p60_av1.mp4", 20],       // 0:00-0:20 problem
-  ["solution_1080p60_av1.mp4", 30],    // 0:20-0:50 solution
-  ["moil_demo_1080p60_av1.mp4", 60],   // 0:50-1:50 live prototype
-  ["tour_1080p60_av1.mp4", 12],        // 1:50-2:02 Reserves / Actions / Data adapter
-  ["outro_1080p60_av1.mp4", 16],       // 2:02-2:18 impact, roadmap, end card
+  ["intro_1080p60_av1.mp4", 24],       // 0:00-0:24 problem
+  ["solution_1080p60_av1.mp4", 40],    // 0:24-1:04 solution
+  ["moil_demo_1080p60_av1.mp4", 90],   // 1:04-2:34 live prototype
+  ["tour_1080p60_av1.mp4", 24],        // 2:34-2:58 Reserves / Actions / Data adapter
+  ["outro_1080p60_av1.mp4", 32],       // 2:58-3:30 impact, roadmap, team, end card
 ];
 const SCRIPTS = ["intro/INTRO_SCRIPT.md", "solution/SOLUTION_SCRIPT.md", "DEMO_SCRIPT.md", "outro/OUTRO_SCRIPT.md"];
 const TOTAL = SEGMENTS.reduce((a, [, d]) => a + d, 0);
 
+const SRT_ONLY = process.argv.includes("--srt");
+
 // ── video ──
+if (!SRT_ONLY) {
 const inputs = SEGMENTS.flatMap(([f, d]) => {
   const p = path.join(OUT, f);
   if (!fs.existsSync(p)) throw new Error(`missing ${f}: render it first`);
@@ -41,6 +45,8 @@ const r = spawnSync("ffmpeg", ["-y", "-loglevel", "error", ...inputs, "-filter_c
   "-map", "[av1]", "-c:v", "libsvtav1", "-preset", "6", "-crf", "20", "-g", "120", "-movflags", "+faststart",
   outFile.replace(/\.mp4$/, "_av1.mp4")], { stdio: "inherit" });
 if (r.status !== 0) throw new Error("ffmpeg failed");
+console.log(outFile);
+}
 
 // ── voiceover subtitles: every table row "| ID | m:ss… | … | "VO" |" across the scripts ──
 const lines = [];
@@ -59,4 +65,4 @@ const ts = (s) => {
 };
 fs.writeFileSync(path.join(OUT, "full_voiceover.srt"), lines.map((l, i) =>
   `${i + 1}\n${ts(l.t)} --> ${ts(Math.min(lines[i + 1]?.t ?? TOTAL, TOTAL) - 0.05)}\n[${l.id}] ${l.vo}\n`).join("\n"));
-console.log(`${outFile}\n${lines.length} VO lines -> out/full_voiceover.srt`);
+console.log(`${lines.length} VO lines -> out/full_voiceover.srt`);

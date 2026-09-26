@@ -29,6 +29,9 @@
   .phase .t { margin-top: 10px; font-size: 64px; line-height: 1; }
   .phase .d { margin-top: 18px; font-size: 26px; color: var(--ink2); line-height: 1.4; }
 
+  .member { position: absolute; top: 600px; width: 220px; text-align: center; }
+  .member .nm { font-size: 38px; font-weight: 500; }
+  .member .rl { margin-top: 10px; font-size: 13px; color: var(--amber); }
   #endbg { position: absolute; inset: -40px; background: url(../solution/assets/map.png) center/cover; filter: blur(10px) saturate(1.1); }
   #endShade { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 50%, rgba(10,10,10,.70) 0%, rgba(10,10,10,.95) 72%); }
 </style>
@@ -37,7 +40,7 @@
 <div id="stage">
 
   <!-- O1 0-6: market impact -->
-  <section class="scene" id="o1" data-start="0" data-end="6">
+  <section class="scene" id="o1" data-start="0" data-end="9">
     <div class="el mono" id="o1t" style="left:110px; top:120px; font-size:15px; color:var(--ink3)">The opportunity · India · 2021–22</div>
     <div class="stat el" id="m1" style="left:110px"><div class="v" id="v1">127</div><div class="l mono">Reporting manganese mines</div></div>
     <div class="stat el" id="m2" style="left:590px"><div class="v" id="v2">2.70 Mt</div><div class="l mono">Mined</div></div>
@@ -49,7 +52,7 @@
   </section>
 
   <!-- O2 6-12: roadmap -->
-  <section class="scene" id="o2" data-start="6" data-end="12">
+  <section class="scene" id="o2" data-start="9" data-end="19">
     <div class="el mono" id="o2t" style="left:110px; top:260px; font-size:15px; color:var(--ink3)">Roadmap</div>
     <div class="el" id="rail"></div>
     <div class="node el" id="n1" style="left:110px"></div>
@@ -63,8 +66,21 @@
       <div class="d">Other PSUs and minerals (iron ore,<br>chromite, bauxite) as a service</div></div>
   </section>
 
-  <!-- O3 12-16: end card -->
-  <section class="scene" id="o3" data-start="12" data-end="16">
+  <!-- O3 19-26: the team -->
+  <section class="scene" id="o3t" data-start="19" data-end="26">
+    <div class="el mono" id="t1" style="left:0; right:0; top:260px; text-align:center; font-size:15px; color:var(--ink3)">The team</div>
+    <div class="el serif" id="t2" style="left:0; right:0; top:296px; text-align:center; font-size:150px; line-height:1">Chalcogens</div>
+    <div class="el member" id="tm0" style="left:140px"><div class="nm">Sunidhi</div><div class="rl mono">Team lead</div></div>
+    <div class="el member" id="tm1" style="left:360px"><div class="nm">Ananya</div></div>
+    <div class="el member" id="tm2" style="left:580px"><div class="nm">Varshith</div></div>
+    <div class="el member" id="tm3" style="left:800px"><div class="nm">Mukul</div></div>
+    <div class="el member" id="tm4" style="left:1020px"><div class="nm">Charithra</div></div>
+    <div class="el member" id="tm5" style="left:1240px"><div class="nm">Arjit</div></div>
+    <div class="el" id="t3" style="left:140px; top:560px; width:1320px; height:1px; background:var(--line)"></div>
+  </section>
+
+  <!-- O4 26-32: end card -->
+  <section class="scene" id="o3" data-start="26" data-end="32">
     <div id="endbg"></div><div id="endShade"></div>
     <div class="el" id="e1" style="left:0; right:0; top:300px; text-align:center">
       <span class="mono" style="font-size:40px; font-weight:500; letter-spacing:0.16em; vertical-align:middle">MOIL Manganese</span>
@@ -72,7 +88,7 @@
     </div>
     <div class="el serif" id="e2" style="left:0; right:0; top:500px; text-align:center; font-size:52px; color:var(--ink2)">
       Where to <span style="color:var(--amber)">explore</span>. How <span style="color:var(--sky)">much</span>. How to <span style="color:var(--green)">hit the plan</span>.</div>
-    <div class="el mono" id="e3" style="left:0; right:0; top:640px; text-align:center; font-size:15px; color:var(--ink3)">SIH 2026 · PS 26009 · MOIL Ltd, Ministry of Steel</div>
+    <div class="el mono" id="e3" style="left:0; right:0; top:640px; text-align:center; font-size:15px; color:var(--ink3)">Team Chalcogens · SIH 2026 · PS 26009 · MOIL Ltd, Ministry of Steel</div>
   </section>
 </div>
 
@@ -90,7 +106,7 @@ function appear(id, t, t0, dur = 0.55, rise = 18) {
 }
 const countUp = (id, t, t0, to, fmt) => { $(id).textContent = fmt(to * easeOut(clamp((t - t0) / 0.9))); };
 
-const XF = 0.25, END = 16;
+const XF = 0.25, END = 32;
 window.__ready = async () => {
   await document.fonts.ready;
   const im = new Image(); im.src = "../solution/assets/map.png"; await im.decode();
@@ -103,23 +119,27 @@ window.__render = (t) => {
     s.style.opacity = Math.min(fin, fout);
     s.style.visibility = +s.style.opacity > 0 ? "visible" : "hidden";
   }
-  // O1: the three numbers count up, then the 1% line
-  appear("o1t", t, 0.15);
-  appear("m1", t, 0.3); countUp("v1", t, 0.3, 127, (v) => Math.round(v));
-  appear("m2", t, 0.6); countUp("v2", t, 0.6, 2.70, (v) => v.toFixed(2) + " Mt");
-  appear("m3", t, 0.9); countUp("v3", t, 0.9, 6.50, (v) => v.toFixed(2) + " Mt");
-  appear("o1r", t, 2.1, 0.5, 0); appear("o1a", t, 2.3, 0.6, 20); appear("o1b", t, 3.2, 0.7, 24); appear("o1s", t, 3.6);
+  // O1 0-9: the three numbers count up, then the 1% line
+  appear("o1t", t, 0.2);
+  appear("m1", t, 0.4); countUp("v1", t, 0.4, 127, (v) => Math.round(v));
+  appear("m2", t, 0.9); countUp("v2", t, 0.9, 2.70, (v) => v.toFixed(2) + " Mt");
+  appear("m3", t, 1.4); countUp("v3", t, 1.4, 6.50, (v) => v.toFixed(2) + " Mt");
+  appear("o1r", t, 3.0, 0.5, 0); appear("o1a", t, 3.3, 0.7, 20); appear("o1b", t, 4.6, 0.8, 24); appear("o1s", t, 5.3);
 
-  // O2: the rail draws, each phase lands on its node
-  appear("o2t", t, 6.15);
-  const r = easeIO(clamp((t - 6.3) / 2.6)); $("rail").style.opacity = r > 0 ? 1 : 0; $("rail").style.transform = `scaleX(${r})`;
-  appear("n1", t, 6.35, 0.3, 0); appear("p1", t, 6.5, 0.6, 22);
-  appear("n2", t, 7.4, 0.3, 0); appear("p2", t, 7.55, 0.6, 22);
-  appear("n3", t, 8.45, 0.3, 0); appear("p3", t, 8.6, 0.6, 22);
+  // O2 9-19: the rail draws, each phase lands on its node
+  appear("o2t", t, 9.2);
+  const r = easeIO(clamp((t - 9.4) / 4.0)); $("rail").style.opacity = r > 0 ? 1 : 0; $("rail").style.transform = `scaleX(${r})`;
+  appear("n1", t, 9.45, 0.3, 0); appear("p1", t, 9.6, 0.7, 22);
+  appear("n2", t, 11.2, 0.3, 0); appear("p2", t, 11.35, 0.7, 22);
+  appear("n3", t, 12.9, 0.3, 0); appear("p3", t, 13.05, 0.7, 22);
 
-  // O3: end card over the prospectivity map
-  $("endbg").style.transform = `scale(${1.12 - 0.06 * easeOut(clamp((t - 12) / 4))})`;
-  appear("e1", t, 12.3, 0.8, 26); appear("e2", t, 13.2, 0.7, 20); appear("e3", t, 14.0);
+  // O3 19-26: the team
+  appear("t1", t, 19.3); appear("t2", t, 19.5, 0.8, 26); appear("t3", t, 20.2, 0.5, 0);
+  for (let i = 0; i < 6; i++) appear("tm" + i, t, 20.4 + 0.22 * i, 0.6, 18);
+
+  // O4 26-32: end card over the prospectivity map
+  $("endbg").style.transform = `scale(${1.12 - 0.06 * easeOut(clamp((t - 26) / 6))})`;
+  appear("e1", t, 26.3, 0.8, 26); appear("e2", t, 27.3, 0.7, 20); appear("e3", t, 28.3);
 };
 window.__render(0);
 </script>

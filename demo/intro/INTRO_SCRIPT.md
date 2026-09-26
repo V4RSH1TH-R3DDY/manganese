@@ -1,6 +1,6 @@
-# Intro: Problem statement (0:00 → 0:20)
+# Intro: Problem statement (0:00 → 0:24)
 
-Five 4-second shots. Three are built from real data and render automatically (S2, S3, S5). Two need
+Five 4.8-second shots (authored at 4 s, rendered with a 1.2× time-stretch). Three are built from real data and render automatically (S2, S3, S5). Two need
 AI footage from Higgsfield (S1, S4). Until those clips exist, the render shows labelled placeholders,
 so you can review timing first.
 
@@ -10,15 +10,15 @@ cd demo && node record_segment.mjs intro    # -> out/intro_1080p60.mp4 (+ _av1.m
 
 ## Shots and voiceover
 
-~45 words over 20 s. Each line starts as its shot appears.
+~50 words over 24 s. Each line starts as its shot appears.
 
 | # | Time | Picture | On-screen text | VO |
 |---|---|---|---|---|
-| S1 | 0:00–0:04 | **Higgsfield:** molten steel pour, slow push-in | *India's steel runs on manganese.* | "India's steel runs on manganese —" |
-| S2 | 0:04–0:08 | Bars grow: mined 2.70 Mt vs imported 6.50 Mt | *We import more than twice what we mine.* | "— yet we import more than twice what we mine." |
-| S3 | 0:08–0:12 | Satellite fly-in from India to the Balaghat–Nagpur belt; MOIL mines light up | 503.6 Mt known · only 15% proven · *85% is still unproven, underground.* | "Eighty-five percent of known manganese is still unproven, underground." |
-| S4 | 0:12–0:16 | **Higgsfield:** flooded open pit in monsoon rain, stalled dumper | *Mines lose output to monsoon rain and equipment breakdowns.* | "And the mines we have lose output to monsoon rain and breakdowns —" |
-| S5 | 0:16–0:20 | Production line falls below plan during a rain spell; month-end marker and gap | *…and it's found only after the month closes.* | "— found only after the month closes." |
+| S1 | 0:00–0:04.8 | **Higgsfield:** molten steel pour, slow push-in | *India's steel runs on manganese.* | "Every tonne of Indian steel needs manganese —" |
+| S2 | 0:04.8–0:09.6 | Bars grow: mined 2.70 Mt vs imported 6.50 Mt | *We import more than twice what we mine.* | "yet we import more than twice as much as we mine." |
+| S3 | 0:09.6–0:14.4 | Satellite fly-in from India to the Balaghat–Nagpur belt; MOIL mines light up | 503.6 Mt known · only 15% proven · *85% is still unproven, underground.* | "Eighty-five percent of known manganese is still unproven, underground." |
+| S4 | 0:14.4–0:19.2 | **Higgsfield:** flooded open pit in monsoon rain, stalled dumper | *Mines lose output to monsoon rain and equipment breakdowns.* | "And working mines lose output to monsoon rain and equipment breakdowns —" |
+| S5 | 0:19.2–0:24 | Production line falls below plan during a rain spell; month-end marker and gap | *…and it's found only after the month closes.* | "usually found only after the month has closed." |
 
 Then cut to the 0:20 solution section.
 

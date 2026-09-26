@@ -29,7 +29,7 @@ const TAG = TOUR ? "tour" : "demo";
 const VW = 1600, VH = 900;
 const DPR = PREVIEW ? 1 : 2;
 const FPS = PREVIEW ? 30 : 60;
-const T0 = TOUR ? 110 : 50;                      // demo starts at 0:50, the tour at 1:50 in the final cut
+const T0 = TOUR ? 154 : 64;                      // demo starts at 1:04, the tour at 2:34 in the final cut
 const REDEPLOY_MINE = process.env.REDEPLOY_MINE ?? "Balaghat";   // mine whose Redeploy card is shown (depends on the seed)
 
 // ── beat sheet from the markdown ────────────────────────────────────────────
@@ -312,30 +312,46 @@ async function position() {
   await page.waitForTimeout(500);
   if (!hits.length) throw new Error("could not locate Dongri Buzurg marker on the map");
   const dbz = { x: guess.x + hits.reduce((a, h) => a + h[0], 0) / hits.length, y: guess.y + hits.reduce((a, h) => a + h[1], 0) / hits.length };
+  // Bharweli, a past-producing mine in the USGS MRDS layer: predict from its offset to DBZ, then
+  // refine on the pointer cursor (the deposits layer is back on).
+  const px = (512 * 2 ** 8.5) / 360, py = (512 * 2 ** 8.5) / (2 * Math.PI);
+  const g2 = { x: dbz.x + (80.18367 - 79.682) * px, y: dbz.y - (merc(21.81614) - merc(21.548)) * py };
+  const h2 = [];
+  for (let oy = -10; oy <= 10; oy += 2) for (let ox = -10; ox <= 10; ox += 2) {
+    await page.mouse.move(g2.x + ox, g2.y + oy);
+    if (await page.evaluate(() => document.querySelector(".maplibregl-canvas").style.cursor === "pointer")) h2.push([ox, oy]);
+  }
+  if (!h2.length) throw new Error("could not locate the Bharweli deposit dot on the map");
+  const deposit = { x: g2.x + h2.reduce((a, h) => a + h[0], 0) / h2.length, y: g2.y + h2.reduce((a, h) => a + h[1], 0) / h2.length };
   await page.mouse.move(VW / 2, VH - 20);
-  return { dbz, mapCenter: mc };
+  return { dbz, deposit, mapCenter: mc };
 }
 
 // ── the show ────────────────────────────────────────────────────────────────
-async function show({ dbz }) {
+async function show({ dbz, deposit }) {
   // A: where to look, how much is there
   await beat("A1");
   tween(0.6, (u) => { cur.o = u; });
-  await wait(0.7);
+  await wait(0.8);
   const bm = await rect(X.bannerMines);
-  await moveTo({ x: bm.x + bm.w * 0.5, y: bm.y + bm.h + 4 }, 1.1);
+  await moveTo({ x: bm.x + bm.w * 0.5, y: bm.y + bm.h + 4 }, 1.2);
 
   await beat("A2");
-  camTo(await rect(X.map), { max: 1.4, dur: 1.6 });
-  await wait(0.4);
+  camTo(await rect(X.map), { max: 1.4, dur: 1.7 });
+  await wait(0.5);
   const lg = await rect(X.legend);
-  await moveTo({ x: lg.x + lg.w + 14, y: center(lg).y + 6 }, 1.3);
+  await moveTo({ x: lg.x + lg.w + 14, y: center(lg).y + 6 }, 1.4);
   spotOn(lg, { pad: 8 });
 
-  await beat("A3");
+  await beat("D1");                                             // a real USGS record under the heat-map
   spotOff(0.4);
+  await moveTo(deposit, 1.3);
+  await wait(0.3);
+  await click();
+
+  await beat("A3");
   await moveTo(dbz, 1.2);
-  await until(B("A3") + 1.5);
+  await until(B("A3") + 1.6);
   await click();                                                // popup + fly-to Dongri Buzurg
 
   await beat("A4");
@@ -344,10 +360,10 @@ async function show({ dbz }) {
   await moveTo(center(sat), 1.1);
   await wait(0.2);
   await click();                                                // satellite imagery under the heat-map
-  await moveTo({ x: cur.x - 180, y: cur.y + 220 }, 1.4);
+  await moveTo({ x: cur.x - 180, y: cur.y + 220 }, 1.6);
 
   await beat("A5");
-  camTo(await rect(X.kpiGrid), { max: 1.8, dur: 1.5 });
+  camTo(await rect(X.kpiGrid), { max: 1.8, dur: 1.6 });
   await wait(0.2);
   await moveTo(center(await rect(X.kpiSub("Reserve P50")), 0.55, 1.6), 1.3);
   spotOn(await rect(X.kpi("Reserve P50")));
@@ -356,10 +372,13 @@ async function show({ dbz }) {
   await beat("B1");
   spotOn(await rect(X.kpi("Expected shortfall")), { dur: 0.7 });
   await moveTo(center(await rect(X.kpiValue("Expected shortfall")), 0.9, 0.95), 1.0);
+  await wait(1.4);
+  spotOn(await rect(X.kpi("P(shortfall > 10%)")), { dur: 0.7 });
+  await moveTo(center(await rect(X.kpiValue("P(shortfall > 10%)")), 0.75, 0.95), 1.0);
 
   await beat("B2");
   spotOff();
-  camTo(await rect(X.forecast), { max: 1.4, dur: 1.6 });
+  camTo(await rect(X.forecast), { max: 1.4, dur: 1.7 });
   await wait(0.4);
   let ch = await rect(X.chart);
   const dayX = async (i) => {                                   // echarts grid: left 52, right 44, 7 categories
@@ -367,20 +386,21 @@ async function show({ dbz }) {
     return ch.x + 52 + ((i + 0.5) * (ch.w - 96)) / 7;
   };
   await moveTo({ x: await dayX(0), y: ch.y + ch.h * 0.6 }, 1.0);
-  const dwell = [0.35, 0.35, 1.1, 1.1, 0.8, 0.35];              // linger on the storm days
+  const dwell = [0.8, 0.9, 2.0, 2.0, 1.8, 1.0];                 // linger on the storm days
   for (let i = 1; i < 7; i++) {
     await wait(dwell[i - 1]);
-    await moveTo({ x: await dayX(i), y: ch.y + ch.h * (i >= 2 && i <= 4 ? 0.72 : 0.6) }, 0.5);
+    await moveTo({ x: await dayX(i), y: ch.y + ch.h * (i >= 2 && i <= 4 ? 0.72 : 0.6) }, 0.6);
   }
 
   await beat("B3");
   const ls = await rect(X.lossSplit), dr = await rect(X.drivers);
-  camTo(union(ls, dr), { max: 1.6, dur: 1.4 });
+  camTo(union(ls, dr), { max: 1.6, dur: 1.5 });
   await wait(0.2);
   spotOn(union(ls, dr), { dur: 0.6 });
-  const rows = await rects(X.driverRows);
-  await moveTo({ x: rows[0].x + rows[0].w * 0.55, y: rows[0].y + rows[0].h * 0.45 }, 1.1);
-  for (const r of rows.slice(1)) { await wait(0.3); await moveTo({ x: r.x + r.w * 0.55, y: r.y + r.h * 0.45 }, 0.6); }
+  const wb = await rect(X.weatherBar);
+  await moveTo({ x: wb.x + wb.w * 0.4, y: wb.y + wb.h + 6 }, 1.1);
+  await wait(0.8);
+  for (const r of await rects(X.driverRows)) { await moveTo({ x: r.x + r.w * 0.55, y: r.y + r.h * 0.45 }, 0.7); await wait(0.5); }
 
   // C: what do we do about it
   await beat("C1");
@@ -389,18 +409,19 @@ async function show({ dbz }) {
   await wait(0.3);
   const t1 = await rect(X.cardTitle(1));
   await moveTo({ x: t1.x + t1.w * 0.45, y: t1.y + t1.h + 4 }, 1.0);
-  await moveTo(center(await rect(X.simulate(1))), 0.9);
+  for (const st of await rects(X.cardSteps(1))) { await wait(0.2); await moveTo({ x: st.x + Math.min(st.w, 330) * 0.9, y: st.y + st.h * 0.6 }, 0.55); }
+  await moveTo(center(await rect(X.simulate(1))), 0.8);
 
   await beat("C2");
   await click();
 
   await beat("C3");
-  camTo(union(await rect(X.forecast), await rect(X.actions)), { max: 1.0, dur: 1.4 });
+  camTo(union(await rect(X.forecast), await rect(X.actions)), { max: 1.0, dur: 1.5 });
   await moveTo({ x: cur.x - 40, y: cur.y + 30 }, 1.0);
 
   await beat("C4");
   const wi = await rect(X.whatIf);
-  camTo(wi, { max: 1.8, dur: 1.3, pad: 180 });
+  camTo(wi, { max: 1.8, dur: 1.4, pad: 180 });
   await wait(0.4);
   spotOn(wi, { pad: 12 });
   await moveTo({ x: wi.x - 30, y: wi.y + wi.h + 18 }, 0.9);
@@ -410,7 +431,7 @@ async function show({ dbz }) {
   camTo(union(await rect(X.chip("Balaghat")), await rect(X.chip("Mansar"))), { max: 1.5, dur: 1.3, pad: 120 });
   await wait(0.2);
   await moveTo(center(await rect(X.chip(REDEPLOY_MINE))), 0.9);
-  await until(B("C5") + 1.3);
+  await until(B("C5") + 1.4);
   await click();
 
   await beat("C6");
@@ -418,10 +439,11 @@ async function show({ dbz }) {
   await wait(0.5);
   spotOn(await rect(X.card(1)), { pad: 8 });
   for (const st of (await rects(X.cardSteps(1))).slice(0, 2)) {
-    await moveTo({ x: st.x + Math.min(st.w, 300) * 0.85, y: st.y + st.h * 0.6 }, 0.5); await wait(0.1);
+    await moveTo({ x: st.x + Math.min(st.w, 300) * 0.85, y: st.y + st.h * 0.6 }, 0.6); await wait(0.6);
   }
+  await wait(0.8);
   spotOff(0.3);
-  await moveTo(center(await rect(X.simulate(1))), 0.5);
+  await moveTo(center(await rect(X.simulate(1))), 0.6);
 
   await beat("C7");
   await click();
@@ -435,7 +457,7 @@ async function show({ dbz }) {
   await beat("C9");
   spotOff(0.6);
   camWide(2.0);
-  await wait(1.2);
+  await wait(1.0);
   tween(0.8, (u) => { cur.o = 1 - u; });
 
   await beat("END");
@@ -451,6 +473,9 @@ const TX = {
   recompute: "//button[contains(., 'Recompute') or contains(., 'Kriging')]",
   actionsHeader: "//h2[contains(., 'All recommended actions')]/..",
   firstCard: "(//article)[1]",
+  secondCard: "(//article)[2]",
+  resBars: "(//div[contains(@class,'echarts-for-react')])[1]",
+  required: "//p[contains(., 'Required columns')]",
   rerun: "//button[contains(., 'Re-run') or contains(., 'Optimizing')]",
   ingestHeader: "//h2[contains(., 'Data adapter')]/..",
   download: "//button[contains(., 'sample CSV') or contains(., 'Downloading')]",
@@ -486,49 +511,58 @@ async function showTour() {
   // Reserves
   await beat("T1");
   tween(0.5, (u) => { cur.o = u; });
-  await moveTo(center(await rect(TX.nav("Reserves"))), 0.8);
-  await until(B("T1") + 0.9);
+  await moveTo(center(await rect(TX.nav("Reserves"))), 0.9);
+  await until(B("T1") + 1.2);
   await click();
 
   await beat("T2");
   camTo(union(await rect(TX.resHeader), await rect(TX.resCharts)), { max: 1.25, dur: 1.1, pad: 30 });
-  await wait(0.2);
-  await moveTo(center(await rect(TX.cutoff)), 0.8);
-  await click();
-  await wait(0.15);
-  await setCutoff(30);
+  await wait(0.4);
+  const bars = await rect(TX.resBars);                          // tooltip across each mine's P10/P50/P90
+  for (const fx of [0.16, 0.34, 0.52, 0.70, 0.88]) {
+    await moveTo({ x: bars.x + bars.w * fx, y: bars.y + bars.h * 0.62 }, 0.4); await wait(0.25);
+  }
 
   await beat("T3");
-  await moveTo(center(await rect(TX.recompute)), 0.5);
-  await wait(0.05);
-  await click();                                                // re-krige at 30% Mn
+  await moveTo(center(await rect(TX.cutoff)), 0.8);
+  await click();
+  await wait(0.3);
+  await setCutoff(30);
 
   await beat("T4");
+  await moveTo(center(await rect(TX.recompute)), 0.4);
+  await click();                                                // re-krige at 30% Mn
   const h = await rect(TX.histogram);
-  await moveTo({ x: h.x + h.w * 0.55, y: h.y + h.h * 0.55 }, 0.9);
+  await moveTo({ x: h.x + h.w * 0.55, y: h.y + h.h * 0.55 }, 1.0);
+  await wait(0.8);
+  await moveTo(center(await rect(TX.resBars), 0.16, 0.62), 1.0);   // Balaghat's new bars
 
   // Actions
   await beat("T5");
   camWide(0.9);
   await moveTo(center(await rect(TX.nav("Actions"))), 0.6);
-  await until(B("T5") + 0.7);
+  await until(B("T5") + 0.8);
   await click();
 
   await beat("T6");
-  const c = await rect(TX.firstCard);
-  await moveTo({ x: c.x + c.w * 0.4, y: c.y + 60 }, 0.6);
+  const c1 = await rect(TX.firstCard), c2 = await rect(TX.secondCard);
+  await moveTo({ x: c1.x + c1.w * 0.4, y: c1.y + 60 }, 0.6);
+  await wait(0.5);
+  await moveTo({ x: c2.x + c2.w * 0.4, y: c2.y + 60 }, 0.6);
   await moveTo(center(await rect(TX.rerun)), 0.8);
-  await until(B("T6") + 1.6);
+  await until(B("T6") + 2.8);
   await click();                                                // re-run the fleet optimizer
 
   // Data adapter
   await beat("T7");
   await moveTo(center(await rect(TX.nav("Data adapter"))), 0.5);
-  await until(B("T7") + 0.6);
+  await until(B("T7") + 0.7);
   await click();
 
   await beat("T8");
   camTo(union(await rect(TX.ingestHeader), await rect(TX.dropzone)), { max: 1.3, dur: 0.9, pad: 40 });
+  await moveTo(center(await rect(TX.required), 0.6, 0.5), 0.6);
+  await wait(0.4);
   await moveTo(center(await rect(TX.download)), 0.5);
   await click();
   await moveTo(center(await rect(TX.dropzone)), 0.6);

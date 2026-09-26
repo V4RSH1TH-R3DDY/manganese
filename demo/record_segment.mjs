@@ -16,9 +16,10 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const SEGMENTS = {
-  intro:    { page: "intro/intro.html", dur: 20, clips: ["s1", "s4"] },
-  solution: { page: "solution/solution.html", dur: 30, clips: [] },
-  outro:    { page: "outro/outro.html", dur: 16, clips: [] },
+  // stretch: the page timeline is authored at 1x and played back `stretch` times slower
+  intro:    { page: "intro/intro.html", dur: 24, stretch: 1.2, clips: ["s1", "s4"] },          // 0:00-0:24
+  solution: { page: "solution/solution.html", dur: 40, stretch: 4 / 3, clips: [] },          // 0:24-1:04
+  outro:    { page: "outro/outro.html", dur: 32, stretch: 1, clips: [] },                    // 2:58-3:30
 };
 const NAME = process.argv[2] ?? "intro";
 const SEG = SEGMENTS[NAME];
@@ -28,7 +29,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PAGE = path.join(HERE, SEG.page);
 const CLIPS = path.join(path.dirname(PAGE), "clips");
 const OUT = path.join(HERE, "out");
-const FPS = 60, DUR = SEG.dur, VW = 1600, VH = 900;
+const FPS = 60, DUR = SEG.dur, STRETCH = SEG.stretch ?? 1, VW = 1600, VH = 900;
 
 // ── clips: per-shot treatment, then all-keyframe VP9 so every per-frame seek is exact and fast ──
 const FILL = `scale=${VW}:${VH}:force_original_aspect_ratio=increase:flags=lanczos,crop=${VW}:${VH}`;
@@ -73,7 +74,7 @@ const browser = await chromium.launch({
     "--allow-file-access-from-files", "--autoplay-policy=no-user-gesture-required"],
 });
 const ctx = await browser.newContext({ viewport: { width: VW, height: VH }, deviceScaleFactor: 2 });
-await ctx.addInitScript((c) => { window.CLIPS = c; }, clips);
+await ctx.addInitScript(([c, k]) => { window.CLIPS = c; window.__STRETCH = k; }, [clips, STRETCH]);
 const page = await ctx.newPage();
 page.on("pageerror", (e) => console.error("pageerror:", e.message));
 await page.clock.install();                                   // rAF / timers run on virtual time
@@ -88,8 +89,8 @@ const started = Date.now();
 for (let f = 0; f < DUR * FPS; f++) {
   const t = f / FPS;
   for (const [i, ct] of cueTimes.entries())
-    if (!fired.has(i) && t >= ct) { await page.evaluate((k) => window.__cues[k].run(), i); fired.add(i); }
-  await page.evaluate(async (tt) => { window.__render(tt); await window.__seek?.(tt); }, t);
+    if (!fired.has(i) && t / STRETCH >= ct) { await page.evaluate((k) => window.__cues[k].run(), i); fired.add(i); }
+  await page.evaluate(async (tt) => { window.__render(tt); await window.__seek?.(tt); }, t / STRETCH);
   await page.clock.runFor(Math.round(((f + 1) * 1000) / FPS) - Math.round((f * 1000) / FPS));
   const shot = await cdp.send("Page.captureScreenshot", { format: "jpeg", quality: 93, optimizeForSpeed: true });
   if (!ffmpeg.stdin.write(Buffer.from(shot.data, "base64"))) await new Promise((r) => ffmpeg.stdin.once("drain", r));
