@@ -6,7 +6,7 @@ clone can rebuild the full pipeline.
 
 | Path | What | Size | Where it comes from |
 |---|---|---|---|
-| `EMAG2_V3_UpCont_DataTiff.tif` | EMAG2 v3 magnetic anomaly grid, upward-continued to 4 km | ~229 MB | <https://www.ncei.noaa.gov/products/earth-magnetic-model-anomaly-grid-2> |
+| `EMAG2_V3_UpCont_DataTiff.tif` | EMAG2 v3 magnetic anomaly grid, upward-continued to 4 km | ~229 MB | Direct: <https://www.ngdc.noaa.gov/geomag/data/EMAG2/EMAG2_V3_20170530/EMAG2_V3_20170530_UpCont.tif> (save under this name); product page: <https://www.ncei.noaa.gov/products/earth-magnetic-model-anomaly-grid-2> |
 | `sources/mrds-fIN.txt` | USGS MRDS deposit points for India, all commodities (manganese is filtered by `build_deposits.py`) | ~360 KB | <https://mrdata.usgs.gov/mrds/> (filter: country = India) |
 | `sources/fulltext-search.json` | USGS MRDS full-text search export (manganese) | ~712 KB | <https://mrdata.usgs.gov/mrds/> full-text search |
 | `deposits.json` | Manganese sites for the map layer and prospectivity labels | ~60 KB | Built by `pipelines/build_deposits.py` |

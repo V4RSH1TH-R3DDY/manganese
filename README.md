@@ -39,7 +39,7 @@ Requires GNU Make, Node 20+, and Python 3.12 (or [uv](https://docs.astral.sh/uv/
 make          # install, seed demo data, train, precompute, then start API + dashboard
 ```
 
-Open <http://localhost:5173>. The API explorer is at <http://localhost:8000/docs>. `make help` lists every step; re-run `make data` on the day you demo, since the scripted storm is placed 3–5 days after seeding.
+Open <http://localhost:5173>. The API explorer is at <http://localhost:8000/docs>. New to the project? [**GETTING_STARTED.md**](GETTING_STARTED.md) covers every dataset, model, setting and fix. `make help` lists every step; re-run `make data` on the day you demo, since the scripted storm is placed 3–5 days after seeding.
 
 **Five MOIL mines. One clearer path from uncertainty to action.**
 
