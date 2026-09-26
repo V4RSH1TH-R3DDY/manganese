@@ -36,12 +36,12 @@ Satellite signals **do not see manganese underground**; they help identify place
 
 ## Try the demo
 
-Requires Docker Desktop and GNU Make. From the project folder, copy `.env.example` to `.env` (PowerShell: `Copy-Item .env.example .env`), then run:
+Requires GNU Make, Node 20+, and Python 3.12 (or [uv](https://docs.astral.sh/uv/), which fetches it). From the project folder:
 
 ```bash
-make up seed train run
+make          # install, seed demo data, train, precompute, then start API + dashboard
 ```
 
-Open <http://localhost:5173>. The API explorer is at <http://localhost:8000/docs>.
+Open <http://localhost:5173>. The API explorer is at <http://localhost:8000/docs>. `make help` lists every step; re-run `make data` on the day you demo, since the scripted storm is placed 3–5 days after seeding.
 
 **Five MOIL mines. One clearer path from uncertainty to action.**

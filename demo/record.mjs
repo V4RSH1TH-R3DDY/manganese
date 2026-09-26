@@ -24,6 +24,7 @@ const VW = 1600, VH = 900;
 const DPR = PREVIEW ? 1 : 2;
 const FPS = PREVIEW ? 30 : 60;
 const T0 = 50;                                   // demo starts at 0:50 in the final cut
+const REDEPLOY_MINE = process.env.REDEPLOY_MINE ?? "Balaghat";   // mine whose Redeploy card is shown (depends on the seed)
 
 // ── beat sheet from the markdown ────────────────────────────────────────────
 const beats = {};
@@ -129,7 +130,11 @@ const union = (...rs) => {
 const center = (r, fx = 0.5, fy = 0.5) => ({ x: r.x + r.w * fx, y: r.y + r.h * fy });
 
 const X = {
-  banner: "//div[contains(., 'High shortfall risk') and contains(@class,'rounded-xl')]",
+  banner: "//div[contains(., 'High shortfall risk') and contains(@class,'border-red-500/40')]",
+  bannerMines: "//div[contains(., 'High shortfall risk') and contains(@class,'border-red-500/40')]/span",
+  legend: "//div[contains(@class,'font-mono') and normalize-space()='Prospectivity']/..",
+  basemap: (name) => `//button[normalize-space()='${name}']`,
+  depositsToggle: "//label[contains(., 'MRDS Deposits')]//input",
   map: "//div[contains(@class,'maplibregl-map')]",
   kpiGrid: "//div[contains(@class,'uppercase') and normalize-space()='Expected shortfall']/ancestor::div[contains(@class,'grid-cols-2')][1]",
   kpi: (label) => `//div[contains(@class,'uppercase') and normalize-space()='${label}']/..`,
@@ -146,7 +151,7 @@ const X = {
   cardTitle: (n) => `(//h3[normalize-space()='Recommended actions']/ancestor::section[1]//article)[${n}]//h4`,
   cardSteps: (n) => `(//h3[normalize-space()='Recommended actions']/ancestor::section[1]//article)[${n}]//li`,
   simulate: (n) => `(//h3[normalize-space()='Recommended actions']/ancestor::section[1]//article)[${n}]//button[contains(., 'Simulate')]`,
-  whatIf: "//div[contains(., 'What-if active') and contains(@class,'text-emerald-300')]",
+  whatIf: "//span[contains(@class,'font-display') and contains(., 'recovered')]/..",
   chip: (name) => `//button[normalize-space()='${name}']`,
 };
 async function rects(xpath) {
@@ -254,11 +259,10 @@ async function rehearse(ctx) {
   const r = await position();
   await page.mouse.click(r.dbz.x, r.dbz.y);
   await page.waitForTimeout(2000);
-  await page.mouse.move(r.mapCenter.x, r.mapCenter.y);
-  for (let i = 0; i < 140; i++) { await page.mouse.wheel(0, -2.6); await page.waitForTimeout(16); }
-  await page.waitForTimeout(2500);
-  await page.click("xpath=" + X.chip("Mansar"));
-  await page.waitForTimeout(2500);
+  await page.click("xpath=" + X.basemap("Satellite"));
+  await page.waitForTimeout(3000);
+  await page.click("xpath=" + X.chip(REDEPLOY_MINE));
+  await page.waitForTimeout(3000);
   await page.close();
   page = rec;
 }
@@ -287,7 +291,10 @@ async function position() {
   await page.click(".maplibregl-ctrl-zoom-out");
   await page.waitForTimeout(2500);                              // tiles
 
-  // Predicted DBZ pixel at z8.5, then refine by hit-testing MapLibre's pointer cursor.
+  // Predicted DBZ pixel at z8.5, then refine by hit-testing MapLibre's pointer cursor. Deposit dots
+  // also show a pointer and one sits beside the mine, so hide that layer while scanning.
+  await page.click("xpath=" + X.depositsToggle);
+  await page.waitForTimeout(300);
   const pz = (512 * 2 ** 8.5) / 360;
   const guess = { x: mc.x + (79.682 - 79.74) * pz, y: mc.y + ((merc(21.675) - merc(21.548)) * 512 * 2 ** 8.5) / (2 * Math.PI) };
   const hits = [];
@@ -295,6 +302,8 @@ async function position() {
     await page.mouse.move(guess.x + ox, guess.y + oy);
     if (await page.evaluate(() => document.querySelector(".maplibregl-canvas").style.cursor === "pointer")) hits.push([ox, oy]);
   }
+  await page.click("xpath=" + X.depositsToggle);
+  await page.waitForTimeout(500);
   if (!hits.length) throw new Error("could not locate Dongri Buzurg marker on the map");
   const dbz = { x: guess.x + hits.reduce((a, h) => a + h[0], 0) / hits.length, y: guess.y + hits.reduce((a, h) => a + h[1], 0) / hits.length };
   await page.mouse.move(VW / 2, VH - 20);
@@ -302,132 +311,118 @@ async function position() {
 }
 
 // ── the show ────────────────────────────────────────────────────────────────
-async function show({ dbz, mapCenter }) {
-  // A — GIS map
+async function show({ dbz }) {
+  // A: where to look, how much is there
   await beat("A1");
   tween(0.6, (u) => { cur.o = u; });
-  await wait(0.8);
-  const banner = await rect(X.banner);
-  await moveTo({ x: banner.x + 330, y: center(banner).y + 3 }, 1.1);
+  await wait(0.7);
+  const bm = await rect(X.bannerMines);
+  await moveTo({ x: bm.x + bm.w * 0.5, y: bm.y + bm.h + 4 }, 1.1);
 
   await beat("A2");
-  camTo(await rect(X.map), { max: 1.55, dur: 1.6 });
-  await wait(0.35);
-  await moveTo(dbz, 1.5);
+  camTo(await rect(X.map), { max: 1.4, dur: 1.6 });
+  await wait(0.4);
+  const lg = await rect(X.legend);
+  await moveTo({ x: lg.x + lg.w + 14, y: center(lg).y + 6 }, 1.3);
+  spotOn(lg, { pad: 8 });
 
   await beat("A3");
-  await click();
+  spotOff(0.4);
+  await moveTo(dbz, 1.2);
+  await until(B("A3") + 1.5);
+  await click();                                                // popup + fly-to Dongri Buzurg
 
   await beat("A4");
-  await moveTo(mapCenter, 0.6);                                 // fly-to has centred DBZ; follow it
-  const wheelEnd = B("A5");                                     // ~2 zoom levels of smooth trackpad-style scroll
-  hooks.add(async () => { if (now() < wheelEnd) await page.mouse.wheel(0, -2.6 * (60 / FPS)); });
+  await moveTo(center(await rect(X.basemap("Satellite"))), 1.1);
+  await wait(0.2);
+  await click();                                                // satellite imagery under the heat-map
+  await moveTo({ x: cur.x - 180, y: cur.y + 220 }, 1.4);
 
   await beat("A5");
-  hooks.clear();
-  moveTo({ x: mapCenter.x + 14, y: mapCenter.y + 8 }, 1.8);
-
-  await beat("A6");
-  const kpis = await rect(X.kpiGrid);
-  camTo(kpis, { max: 1.8, dur: 1.5 });
+  camTo(await rect(X.kpiGrid), { max: 1.8, dur: 1.5 });
   await wait(0.2);
   await moveTo(center(await rect(X.kpiSub("Reserve P50")), 0.55, 1.6), 1.3);
+  spotOn(await rect(X.kpi("Reserve P50")));
 
-  await beat("A7");
-  await spotOn(await rect(X.kpi("Reserve P50")));
-
-  // B — shortfall engine
+  // B: will we hit the plan
   await beat("B1");
   spotOn(await rect(X.kpi("Expected shortfall")), { dur: 0.7 });
   await moveTo(center(await rect(X.kpiValue("Expected shortfall")), 0.9, 0.95), 1.0);
 
   await beat("B2");
-  spotOn(await rect(X.kpi("P(shortfall > 10%)")), { dur: 0.7 });
-  await moveTo(center(await rect(X.kpiValue("P(shortfall > 10%)")), 0.75, 0.95), 1.0);
-
-  await beat("B3");
   spotOff();
-  camTo(await rect(X.forecast), { max: 1.4, dur: 1.7 });
-  await wait(0.5);
+  camTo(await rect(X.forecast), { max: 1.4, dur: 1.6 });
+  await wait(0.4);
   let ch = await rect(X.chart);
   const dayX = async (i) => {                                   // echarts grid: left 52, right 44, 7 categories
     ch = await rect(X.chart);
     return ch.x + 52 + ((i + 0.5) * (ch.w - 96)) / 7;
   };
-  await moveTo({ x: await dayX(0), y: ch.y + ch.h * 0.62 }, 1.2);
-
-  await beat("B4");
-  const dwell = [0.5, 0.5, 1.3, 1.3, 1.0, 0.5];           // linger on the storm days
+  await moveTo({ x: await dayX(0), y: ch.y + ch.h * 0.6 }, 1.0);
+  const dwell = [0.35, 0.35, 1.1, 1.1, 0.8, 0.35];              // linger on the storm days
   for (let i = 1; i < 7; i++) {
     await wait(dwell[i - 1]);
-    await moveTo({ x: await dayX(i), y: ch.y + ch.h * (i >= 3 && i <= 5 ? 0.72 : 0.62) }, 0.55);
+    await moveTo({ x: await dayX(i), y: ch.y + ch.h * (i >= 2 && i <= 4 ? 0.72 : 0.6) }, 0.5);
   }
 
-  await beat("B5");
+  await beat("B3");
   const ls = await rect(X.lossSplit), dr = await rect(X.drivers);
-  camTo(union(ls, dr), { max: 1.6, dur: 1.5 });
+  camTo(union(ls, dr), { max: 1.6, dur: 1.4 });
   await wait(0.2);
-  spotOn(ls, { dur: 0.6 });
-  const wb = await rect(X.weatherBar);
-  await moveTo({ x: wb.x + wb.w * 0.4, y: wb.y + wb.h + 6 }, 1.2);
-
-  await beat("B6");
-  spotOn(dr, { dur: 0.7 });
+  spotOn(union(ls, dr), { dur: 0.6 });
   const rows = await rects(X.driverRows);
-  for (const r of rows) { await moveTo({ x: r.x + r.w * 0.55, y: r.y + r.h * 0.45 }, 0.8); await wait(0.7); }
+  await moveTo({ x: rows[0].x + rows[0].w * 0.55, y: rows[0].y + rows[0].h * 0.45 }, 1.1);
+  for (const r of rows.slice(1)) { await wait(0.3); await moveTo({ x: r.x + r.w * 0.55, y: r.y + r.h * 0.45 }, 0.6); }
 
-  // C — action optimizer
+  // C: what do we do about it
   await beat("C1");
   spotOff();
-  camTo(await rect(X.card(1)), { max: 1.45, dur: 1.6, pad: 40 });
+  camTo(await rect(X.card(1)), { max: 1.45, dur: 1.5, pad: 40 });
   await wait(0.3);
   const t1 = await rect(X.cardTitle(1));
-  await moveTo({ x: t1.x + t1.w * 0.45, y: t1.y + t1.h + 4 }, 1.2);
-  for (const s of await rects(X.cardSteps(1))) { await wait(0.25); await moveTo({ x: s.x + Math.min(s.w, 330) * 0.9, y: s.y + s.h * 0.6 }, 0.6); }
+  await moveTo({ x: t1.x + t1.w * 0.45, y: t1.y + t1.h + 4 }, 1.0);
+  await moveTo(center(await rect(X.simulate(1))), 0.9);
 
   await beat("C2");
-  await moveTo(center(await rect(X.simulate(1))), 0.8);
-  await until(B("C2") + 0.8);
   await click();
 
   await beat("C3");
-  camTo(union(await rect(X.forecast), await rect(X.actions)), { max: 1.0, dur: 1.5 });
+  camTo(union(await rect(X.forecast), await rect(X.actions)), { max: 1.0, dur: 1.4 });
   await moveTo({ x: cur.x - 40, y: cur.y + 30 }, 1.0);
 
   await beat("C4");
   const wi = await rect(X.whatIf);
-  camTo(wi, { max: 1.8, dur: 1.4, pad: 180 });
+  camTo(wi, { max: 1.8, dur: 1.3, pad: 180 });
   await wait(0.4);
   spotOn(wi, { pad: 12 });
-  await moveTo({ x: wi.x - 30, y: wi.y + wi.h + 18 }, 1.0);
+  await moveTo({ x: wi.x - 30, y: wi.y + wi.h + 18 }, 0.9);
 
   await beat("C5");
-  spotOff();
-  camTo(union(await rect(X.chip("Balaghat")), await rect(X.chip("Mansar"))), { max: 1.5, dur: 1.4, pad: 120 });
-  await wait(0.3);
-  await moveTo(center(await rect(X.chip("Mansar"))), 1.0);
-  await until(B("C5") + 1.4);
+  spotOff(0.4);
+  camTo(union(await rect(X.chip("Balaghat")), await rect(X.chip("Mansar"))), { max: 1.5, dur: 1.3, pad: 120 });
+  await wait(0.2);
+  await moveTo(center(await rect(X.chip(REDEPLOY_MINE))), 0.9);
+  await until(B("C5") + 1.3);
   await click();
 
   await beat("C6");
-  await until(B("C6"));
-  camTo(await rect(X.card(1)), { max: 1.45, dur: 1.5, pad: 40 });
+  camTo(await rect(X.card(1)), { max: 1.45, dur: 1.4, pad: 40 });
   await wait(0.5);
   spotOn(await rect(X.card(1)), { pad: 8 });
-  const steps = await rects(X.cardSteps(1));
-  for (const s of steps.slice(0, 3)) { await moveTo({ x: s.x + Math.min(s.w, 300) * 0.85, y: s.y + s.h * 0.6 }, 0.55); await wait(0.1); }
-
-  await beat("C7");
+  for (const st of (await rects(X.cardSteps(1))).slice(0, 2)) {
+    await moveTo({ x: st.x + Math.min(st.w, 300) * 0.85, y: st.y + st.h * 0.6 }, 0.5); await wait(0.1);
+  }
   spotOff(0.3);
   await moveTo(center(await rect(X.simulate(1))), 0.5);
-  await wait(0.1);
+
+  await beat("C7");
   await click();
 
   await beat("C8");
-  camTo(await rect(X.kpiGrid), { max: 1.8, dur: 1.5 });
-  await wait(0.9);
+  camTo(await rect(X.kpiGrid), { max: 1.8, dur: 1.4 });
+  await wait(0.8);
   spotOn(await rect(X.kpi("Expected shortfall")));
-  await moveTo(center(await rect(X.kpiValue("Expected shortfall")), 0.95, 0.95), 1.1);
+  await moveTo(center(await rect(X.kpiValue("Expected shortfall")), 0.95, 0.95), 1.0);
 
   await beat("C9");
   spotOff(0.6);

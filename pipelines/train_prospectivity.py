@@ -12,7 +12,7 @@ from sklearn.model_selection import GroupKFold
 
 FEATURE_DIR = Path("data/features")
 DEPOSITS_JSON = Path("data/deposits.json")
-MRDS_PATH = Path("data/fulltext-search.json")
+MRDS_PATH = Path("data/sources/fulltext-search.json")
 ARTIFACT_OUT = Path("artifacts/prospectivity.joblib")
 BACKEND_ARTIFACT = Path("backend/artifacts/prospectivity.joblib")
 

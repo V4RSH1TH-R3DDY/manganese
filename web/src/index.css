@@ -1,11 +1,35 @@
 @import "tailwindcss";
 
+/* Type system: Inter Tight for UI, JetBrains Mono for labels and data,
+   Instrument Serif italic (font-display) only for the brand, the mine in focus
+   and outcomes, so it keeps meaning "this matters". */
+@theme {
+  --font-sans: "Inter Tight", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-display: "Instrument Serif", ui-serif, Georgia, serif;
+  --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
 :root { color-scheme: dark; }
 
 body {
   background: #0a0a0a;
   color: #e5e5e5;
-  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-sans);
+}
+
+/* Press feedback: pressables scale slightly so a click visibly lands. In the base
+   layer so a component can still override it with a utility. */
+@layer base {
+  button, nav a {
+    transition-property: color, background-color, border-color, transform;
+    transition-duration: 160ms;
+    transition-timing-function: var(--ease-out-strong);
+  }
+  button:not(:disabled):active, nav a:active { transform: scale(0.97); }
+  @media (prefers-reduced-motion: reduce) {
+    button:not(:disabled):active, nav a:active { transform: none; }
+  }
 }
 
 /* MapLibre ships rounded controls and popups; square them so the map matches

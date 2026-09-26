@@ -6,7 +6,6 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./moil.db"
     model_dir: str = "./artifacts"
     cog_path: str = "/data/cogs/prospectivity.tif"
-    titiler_public_url: str = "http://localhost:8001"
     cors_origins: list[str] = ["*"]
     open_meteo_url: str = "https://api.open-meteo.com/v1/forecast"
     open_meteo_archive_url: str = "https://archive-api.open-meteo.com/v1/archive"   # ERA5, keyless

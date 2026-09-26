@@ -13,10 +13,10 @@ export default function ActionCard({ a, horizon = 7, onResult }:
   return (
     <article className="border border-neutral-800 p-4">
       <div className="flex items-center gap-2">
-        <span className="border border-neutral-700 px-1.5 py-0.5 text-[10px] uppercase tracking-[0.15em] text-neutral-400">
+        <span className="border border-neutral-700 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.08em] text-neutral-400">
           {KIND[a.kind] ?? a.kind}
         </span>
-        <span className="ml-auto text-[10px] uppercase tracking-[0.15em] text-neutral-500">{a.mine}</span>
+        <span className="ml-auto font-mono text-[10px] uppercase tracking-[0.08em] text-neutral-500">{a.mine}</span>
       </div>
 
       <h4 className="mt-2 font-medium leading-snug text-neutral-100">{a.title}</h4>

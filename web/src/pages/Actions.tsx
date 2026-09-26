@@ -19,7 +19,7 @@ export default function Actions() {
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-base font-medium">
-          All recommended actions <span className="text-neutral-500">(ranked by expected tonnes)</span>
+          All recommended actions <span className="font-display text-[20px] font-normal italic text-neutral-400">ranked by expected tonnes</span>
         </h2>
         <button
           onClick={() => refresh.mutate()}

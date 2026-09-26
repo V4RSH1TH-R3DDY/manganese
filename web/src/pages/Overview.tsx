@@ -10,10 +10,10 @@ import Kpi from "../components/Kpi";
 import MapView, { type BasemapMode } from "../components/MapView";
 import RiskBadge from "../components/RiskBadge";
 
-const HEAD = "text-[10px] uppercase tracking-[0.15em] text-neutral-500";
+const HEAD = "font-mono text-[10px] uppercase tracking-[0.08em] text-neutral-500";
 
 export default function Overview() {
-  const { mine, horizon, sim, setMine, setHorizon, setSim } = useStore();
+  const { mine, instant, horizon, sim, setMine, setHorizon, setSim } = useStore();
   const [showProsp, setShowProsp] = useState(true);
   const [showDeposits, setShowDeposits] = useState(true);
   const [showDrillholes, setShowDrillholes] = useState(false);
@@ -40,7 +40,7 @@ export default function Overview() {
       if (!list?.length) return;
       const i = list.findIndex((m) => m.code === mine);
       const next = list[(Math.max(i, 0) + (e.key === "j" ? 1 : list.length - 1)) % list.length];
-      setMine(next.code);
+      setMine(next.code, true);                                        // keyboard: no fly-to animation
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -54,7 +54,8 @@ export default function Overview() {
     <div className="space-y-4">
       {redMines.length > 0 && (
         <div className="border border-red-500/40 bg-red-500/5 px-4 py-2 text-sm text-red-300">
-          High shortfall risk this week: <b className="font-medium">{redMines.map((m) => m.name).join(", ")}</b>
+          High shortfall risk this week:{" "}
+          <span className="font-display text-[17px] italic text-red-200">{redMines.map((m) => m.name).join(", ")}</span>
         </div>
       )}
 
@@ -69,11 +70,12 @@ export default function Overview() {
           </button>
         ))}
         <div className="ml-auto flex items-center gap-2">
-          <label className="flex items-center gap-1.5 text-sm text-neutral-400">
-            <input type="checkbox" checked={showProsp} onChange={(e) => setShowProsp(e.target.checked)}
-              className="accent-neutral-400" /> Prospectivity
+          <label className={`flex items-center gap-1.5 text-sm ${prosp.data ? "text-neutral-400" : "text-neutral-600"}`}
+            title={prosp.data ? "Model-ranked exploration potential from EMAG2 magnetics" : "Prospectivity layer not built yet (make prosp)"}>
+            <input type="checkbox" checked={showProsp && !!prosp.data} disabled={!prosp.data}
+              onChange={(e) => setShowProsp(e.target.checked)} className="accent-neutral-400" /> Prospectivity
           </label>
-          <label className="flex items-center gap-1.5 text-sm text-neutral-400" title="83 regional manganese deposits from USGS MRDS & GSI">
+          <label className="flex items-center gap-1.5 text-sm text-neutral-400" title={`${deposits.data?.length ?? 0} manganese sites from USGS MRDS`}>
             <input type="checkbox" checked={showDeposits} onChange={(e) => setShowDeposits(e.target.checked)}
               className="accent-sky-400" />
             <span className="flex items-center gap-1">
@@ -92,27 +94,27 @@ export default function Overview() {
           <div className="flex border border-neutral-800">
             <button
               onClick={() => setBasemap("black")}
-              className={`px-2.5 py-1 text-xs transition-colors ${
+              className={`px-2.5 py-1 text-xs ${
                 basemap === "black" ? "bg-neutral-800 text-white font-medium" : "text-neutral-400 hover:text-neutral-200"
               }`}
             >
-              ⬛ Black
+              Black
             </button>
             <button
               onClick={() => setBasemap("satellite")}
-              className={`border-l border-neutral-800 px-2.5 py-1 text-xs transition-colors ${
+              className={`border-l border-neutral-800 px-2.5 py-1 text-xs ${
                 basemap === "satellite" ? "bg-neutral-800 text-white font-medium" : "text-neutral-400 hover:text-neutral-200"
               }`}
             >
-              🛰 Satellite
+              Satellite
             </button>
             <button
               onClick={() => setBasemap("streets")}
-              className={`border-l border-neutral-800 px-2.5 py-1 text-xs transition-colors ${
+              className={`border-l border-neutral-800 px-2.5 py-1 text-xs ${
                 basemap === "streets" ? "bg-neutral-800 text-white font-medium" : "text-neutral-400 hover:text-neutral-200"
               }`}
             >
-              🗺 Streets
+              Streets
             </button>
           </div>
           {([7, 14] as const).map((h) => (
@@ -130,11 +132,12 @@ export default function Overview() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-12">
-        <section className="lg:col-span-8 print:hidden">
+        <section className="relative lg:col-span-8 print:hidden">
           {mines.data && (
             <MapView
               mines={mines.data}
               selected={mine}
+              instant={instant}
               onSelect={setMine}
               prospectivity={prosp.data}
               showProsp={showProsp}
@@ -145,10 +148,17 @@ export default function Overview() {
               showDeposits={showDeposits}
             />
           )}
+          {showProsp && prosp.data && (                          // legend matches the tile colormap in api/v1/prospectivity.py
+            <div className="pointer-events-none absolute bottom-3 left-3 border border-neutral-800 bg-neutral-950/85 px-2.5 py-2">
+              <div className="font-mono text-[10px] uppercase tracking-[0.08em] text-neutral-400">Prospectivity</div>
+              <div className="mt-1.5 h-1.5 w-36" style={{ background: "linear-gradient(90deg, rgba(57,11,119,0.27), rgba(134,43,91,0.63), rgba(210,88,63,0.85), rgba(255,145,35,0.85), rgba(255,230,0,0.85))" }} />
+              <div className="mt-1 flex justify-between font-mono text-[10px] text-neutral-500"><span>low</span><span>high</span></div>
+            </div>
+          )}
         </section>
         <section className="space-y-3 lg:col-span-4">
           <div className="flex items-center gap-2">
-            <h2 className="text-base font-medium">{mines.data?.find((m) => m.code === mine)?.name ?? "…"}</h2>
+            <h2 className="font-display text-[26px] leading-none italic">{mines.data?.find((m) => m.code === mine)?.name ?? "…"}</h2>
             {r && <RiskBadge level={r.level} />}
           </div>
           <QueryError error={risk.error} what="risk forecast" />
@@ -170,8 +180,9 @@ export default function Overview() {
           <div className="mb-2 flex items-center justify-between">
             <h3 className={HEAD}>Production forecast</h3>
             {sim && (
-              <div className="flex items-center gap-2 text-xs text-emerald-400">
-                What-if active · +{fmtT(recovered)} recovered
+              <div className="flex items-baseline gap-2 text-xs text-emerald-400">
+                What-if active ·
+                <span className="font-display text-[20px] leading-none italic text-emerald-300">+{fmtT(recovered)} recovered</span>
                 <button onClick={() => setSim(null)}
                   className="border border-neutral-700 px-2 py-0.5 text-neutral-400 hover:border-neutral-500">
                   Reset

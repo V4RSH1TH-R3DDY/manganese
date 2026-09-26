@@ -66,14 +66,14 @@ export default function Ingest() {
     <div className="max-w-4xl space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-base font-medium">
-          Data adapter <span className="text-neutral-500">bring your own MOIL data</span>
+          Data adapter <span className="font-display text-[20px] font-normal italic text-neutral-400">bring your own MOIL data</span>
         </h2>
         <button
           onClick={handleDownload}
           disabled={downloading}
-          className="border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-xs text-neutral-300 hover:border-neutral-500 hover:text-white transition-colors"
+          className="border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-xs text-neutral-300 hover:border-neutral-500 hover:text-white"
         >
-          {downloading ? "Downloading…" : "📥 Download Sample CSV"}
+          {downloading ? "Downloading…" : "Download sample CSV"}
         </button>
       </div>
 
@@ -142,7 +142,7 @@ export default function Ingest() {
               <thead className="bg-neutral-900/60 text-neutral-400 border-b border-neutral-800">
                 <tr>
                   {Object.keys(records[0]).map((col) => (
-                    <th key={col} className="px-3 py-2 font-medium tracking-wider uppercase text-[10px]">
+                    <th key={col} className="px-3 py-2 font-mono text-[10px] font-medium uppercase tracking-wider">
                       {col}
                     </th>
                   ))}
