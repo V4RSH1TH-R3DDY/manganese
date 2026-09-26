@@ -1,0 +1,7 @@
+{
+  "name": "moil-demo-recorder",
+  "private": true,
+  "type": "module",
+  "scripts": { "record": "node record.mjs" },
+  "devDependencies": { "playwright": "^1.55.0" }
+}

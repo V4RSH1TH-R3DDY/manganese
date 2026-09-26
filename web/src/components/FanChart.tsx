@@ -1,18 +1,21 @@
 import ReactECharts from "echarts-for-react";
 import type { BandPoint } from "../lib/api";
+import { CHART_MONO, CHART_SANS, useFontsReady } from "../lib/fonts";
 
 const AXIS = { axisLabel: { color: "#737373", fontSize: 11 }, axisLine: { lineStyle: { color: "#262626" } } };
 
 export default function FanChart({ band, after }: { band: BandPoint[]; after?: BandPoint[] }) {
+  const fonts = useFontsReady();
   const option: any = {
     backgroundColor: "transparent",
+    textStyle: { fontFamily: fonts ? CHART_MONO : undefined },
     grid: { left: 52, right: 44, top: 32, bottom: 28 },
     legend: { top: 0, itemWidth: 14, itemHeight: 2, textStyle: { color: "#737373", fontSize: 11 },
       data: ["Plan", "Expected", "After action", "Rain (mm)"] },
     tooltip: {
       trigger: "axis",
       backgroundColor: "#0a0a0a", borderColor: "#404040", borderWidth: 1,
-      textStyle: { color: "#e5e5e5", fontSize: 12 },
+      textStyle: { color: "#e5e5e5", fontSize: 12, fontFamily: fonts ? CHART_SANS : undefined },
       formatter: (p: any) => {
         const b = band[p[0].dataIndex];
         const a = after?.[p[0].dataIndex];
@@ -25,7 +28,7 @@ export default function FanChart({ band, after }: { band: BandPoint[]; after?: B
     yAxis: [
       { type: "value", name: "t/day", nameTextStyle: { color: "#737373", fontSize: 11 }, ...AXIS,
         splitLine: { lineStyle: { color: "#1c1c1c" } }, min: (v: { min: number }) => Math.floor(v.min * 0.85) },
-      { type: "value", inverse: true, max: (v: { max: number }) => Math.max(80, v.max * 2.2),
+      { type: "value", inverse: true, max: (v: { max: number }) => Math.max(80, Math.ceil((v.max * 2.2) / 20) * 20),
         ...AXIS, splitLine: { show: false } },
     ],
     series: [

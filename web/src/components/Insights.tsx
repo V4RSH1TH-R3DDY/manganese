@@ -1,6 +1,6 @@
 import type { Driver } from "../lib/api";
 
-const HEAD = "text-[10px] uppercase tracking-[0.15em] text-neutral-500";
+const HEAD = "font-mono text-[10px] uppercase tracking-[0.08em] text-neutral-500";
 
 export function LossSplit({ weather, equipment }: { weather: number; equipment: number }) {
   const total = Math.max(weather + equipment, 0.01);

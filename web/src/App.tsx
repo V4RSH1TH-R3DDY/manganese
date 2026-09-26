@@ -31,7 +31,7 @@ function ProvenanceBadge({ health }: { health?: Health }) {
   if (flagged.length === 0) {
     return (
       <span title={tooltip}
-        className="ml-auto shrink-0 whitespace-nowrap border border-emerald-500/60 px-2 py-1 text-[10px] font-medium uppercase tracking-[0.15em] text-emerald-400">
+        className="ml-auto shrink-0 whitespace-nowrap border border-emerald-500/60 px-2 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.08em] text-emerald-400">
         Live data
       </span>
     );
@@ -57,7 +57,7 @@ function ProvenanceBadge({ health }: { health?: Health }) {
 
   return (
     <span title={tooltip}
-      className="ml-auto shrink-0 whitespace-nowrap border border-amber-500/60 px-2 py-1 text-[10px] font-medium uppercase tracking-[0.15em] text-amber-400">
+      className="ml-auto shrink-0 whitespace-nowrap border border-amber-500/60 px-2 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.08em] text-amber-400">
       {text}
     </span>
   );
@@ -68,8 +68,9 @@ export default function App() {
   return (
     <div className="w-full px-0 py-4">
       <header className="mb-4 flex items-center gap-4 border-b border-neutral-800 px-4 pb-3 print:hidden">
-        <div className="shrink-0 text-sm font-medium uppercase tracking-[0.2em] text-neutral-100">
-          MOIL Manganese Copilot
+        <div className="flex shrink-0 items-baseline gap-2 text-neutral-100">
+          <span className="font-mono text-xs font-medium uppercase tracking-[0.08em]">MOIL Manganese</span>
+          <span className="font-display text-[22px] leading-none italic">Copilot</span>
         </div>
         <nav className="flex gap-1">
           <NavLink to="/" end className={link}>Command center</NavLink>

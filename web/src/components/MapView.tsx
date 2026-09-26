@@ -16,6 +16,7 @@ interface Props {
   showDrillholes?: boolean;
   deposits?: DepositPoint[];
   showDeposits?: boolean;
+  instant?: boolean;                                     // jump instead of fly (keyboard navigation)
 }
 const COLOR = ["match", ["get", "level"], "red", "#ef4444", "amber", "#f59e0b", "#22c55e"] as any;
 
@@ -27,17 +28,34 @@ const OSM_TILES = ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"];
 const OSM_ATTRIB = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
 // CartoDB Dark Matter / Positron or Dark canvas for blackmap
-const CARTO_DARK_TILES = ["https://a.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}@2x.png"];
-const CARTO_DARK_ATTRIB = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="https://carto.com/attributions">CARTO</a>';
+// Esri's dark canvas is keyless; CARTO's dark tiles now render an "API KEY REQUIRED" watermark.
+const DARK_TILES = ["https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"];
+const DARK_ATTRIB = "Basemap &copy; Esri, HERE, Garmin, &copy; OpenStreetMap contributors";
 
 export default function MapView({
   mines, selected, onSelect, prospectivity, showProsp, basemap = "black",
   drillholes, showDrillholes = false,
-  deposits, showDeposits = true,
+  deposits, showDeposits = true, instant = false,
 }: Props) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<MapLibreMap | null>(null);
   const minesRef = useRef(mines); minesRef.current = mines;
+  const popup = useRef<{ code: string | null; p: maplibregl.Popup } | null>(null);
+
+  // Run once the style has loaded, then immediately. isStyleLoaded() is also false while tiles
+  // stream in, and "load" fires only once, so changes made mid-zoom used to be dropped.
+  const styleReady = useRef(false);
+  const onLoaded = (m: MapLibreMap, fn: () => void) => (styleReady.current ? fn() : m.once("load", fn));
+
+  // A mine marker under the click wins over deposit / drill-hole dots drawn near it.
+  const mineUnder = (m: MapLibreMap, point: maplibregl.PointLike) =>
+    !!m.getLayer("mines-dot") && m.queryRenderedFeatures(point, { layers: ["mines-dot"] }).length > 0;
+
+  // One popup at a time across every layer; `code` ties a mine popup to the selection.
+  const showPopup = (m: MapLibreMap, lngLat: [number, number], html: string, code: string | null = null) => {
+    popup.current?.p.remove();
+    popup.current = { code, p: new maplibregl.Popup({ closeButton: false }).setLngLat(lngLat).setHTML(html).addTo(m) };
+  };
 
   useEffect(() => {                                            // create map once
     const m = new maplibregl.Map({
@@ -45,7 +63,7 @@ export default function MapView({
       style: {
         version: 8,
         sources: {
-          dark: { type: "raster", tileSize: 256, maxzoom: 19, attribution: CARTO_DARK_ATTRIB, tiles: CARTO_DARK_TILES },
+          dark: { type: "raster", tileSize: 256, maxzoom: 16, attribution: DARK_ATTRIB, tiles: DARK_TILES },
           satellite: { type: "raster", tileSize: 256, maxzoom: 19, attribution: SATELLITE_ATTRIB, tiles: SATELLITE_TILES },
           osm: { type: "raster", tileSize: 256, maxzoom: 19, attribution: OSM_ATTRIB, tiles: OSM_TILES },
         },
@@ -60,6 +78,7 @@ export default function MapView({
       },
     });
     m.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
+    m.once("load", () => { styleReady.current = true; });
     map.current = m;
     return () => m.remove();
   }, []);
@@ -77,7 +96,7 @@ export default function MapView({
         m.setLayoutProperty("osm-layer", "visibility", basemap === "streets" ? "visible" : "none");
       }
     };
-    m.isStyleLoaded() ? apply() : m.once("load", apply);
+    onLoaded(m, apply);
   }, [basemap]);
 
   useEffect(() => {                                            // prospectivity raster
@@ -90,7 +109,7 @@ export default function MapView({
       }
       m.setLayoutProperty("prosp", "visibility", showProsp ? "visible" : "none");
     };
-    m.isStyleLoaded() ? apply() : m.once("load", apply);
+    onLoaded(m, apply);
   }, [prospectivity, showProsp]);
 
   useEffect(() => {                                            // deposits layer (MRDS/GSI)
@@ -104,10 +123,10 @@ export default function MapView({
           id: d.dep_id,
           name: d.site_name,
           state: d.state,
-          dev: d.dev_stat || "Occurrence",
-          ore: d.ore || "Manganese ore",
-          gangue: d.gangue || "Quartz",
-          rock: d.host_rock || "Gondite / Metasedimentary",
+          dev: d.dev_stat ?? "",                           // only what MRDS records; no filler values
+          ore: d.ore ?? "",
+          gangue: d.gangue ?? "",
+          rock: d.host_rock ?? "",
         },
       })),
     };
@@ -130,19 +149,16 @@ export default function MapView({
           },
         });
         m.on("click", "deposits-dot", (e) => {
+          if (mineUnder(m, e.point)) return;
           const p = e.features![0].properties as any;
-          new maplibregl.Popup({ closeButton: false })
-            .setLngLat((e.features![0].geometry as any).coordinates)
-            .setHTML(
+          showPopup(m, (e.features![0].geometry as any).coordinates,
               `<div class="p-1 text-xs leading-relaxed">` +
               `<strong class="text-sm font-semibold text-sky-400">${p.name}</strong><br/>` +
-              `<span class="text-neutral-400">Status:</span> ${p.dev} (${p.state})<br/>` +
-              `<span class="text-neutral-400">Ore:</span> ${p.ore}<br/>` +
+              (p.dev ? `<span class="text-neutral-400">Status:</span> ${p.dev}${p.state ? ` (${p.state})` : ""}<br/>` : "") +
+              (p.ore ? `<span class="text-neutral-400">Ore:</span> ${p.ore}<br/>` : "") +
               (p.rock ? `<span class="text-neutral-400">Host rock:</span> ${p.rock}<br/>` : "") +
               (p.gangue ? `<span class="text-neutral-400">Gangue:</span> ${p.gangue}` : "") +
-              `</div>`
-            )
-            .addTo(m);
+              `</div>`);
         });
         m.on("mouseenter", "deposits-dot", () => (m.getCanvas().style.cursor = "pointer"));
         m.on("mouseleave", "deposits-dot", () => (m.getCanvas().style.cursor = ""));
@@ -151,7 +167,7 @@ export default function MapView({
         m.setLayoutProperty("deposits-dot", "visibility", showDeposits ? "visible" : "none");
       }
     };
-    m.isStyleLoaded() ? apply() : m.once("load", apply);
+    onLoaded(m, apply);
   }, [deposits, showDeposits]);
 
   useEffect(() => {                                            // drillhole markers
@@ -183,18 +199,17 @@ export default function MapView({
           },
         });
         m.on("click", "drillholes-dot", (e) => {
+          if (mineUnder(m, e.point)) return;
           const p = e.features![0].properties as any;
-          new maplibregl.Popup({ closeButton: false })
-            .setLngLat((e.features![0].geometry as any).coordinates)
-            .setHTML(`<b>Drill Hole #${p.id}</b><br/>Mine: ${p.mine}<br/>Collar Z: ${p.z}m`)
-            .addTo(m);
+          showPopup(m, (e.features![0].geometry as any).coordinates,
+            `<b>Drill Hole #${p.id}</b><br/>Mine: ${p.mine}<br/>Collar Z: ${p.z}m`);
         });
       }
       if (m.getLayer("drillholes-dot")) {
         m.setLayoutProperty("drillholes-dot", "visibility", showDrillholes ? "visible" : "none");
       }
     };
-    m.isStyleLoaded() ? apply() : m.once("load", apply);
+    onLoaded(m, apply);
   }, [drillholes, showDrillholes]);
 
   useEffect(() => {                                            // mine markers
@@ -211,20 +226,22 @@ export default function MapView({
         paint: { "circle-radius": 6.5, "circle-color": COLOR, "circle-stroke-color": "#0a0a0a", "circle-stroke-width": 1.5 } });
       m.on("click", "mines-dot", (e) => {
         const p = e.features![0].properties as any;
+        showPopup(m, (e.features![0].geometry as any).coordinates,
+          `<b>${p.name}</b><br/>Shortfall ${Number(p.pct).toFixed(1)}%${p.res ? `<br/>Reserve P50 ${fmtT(Number(p.res))}` : ""}`, p.code);
         onSelect(p.code);
-        new maplibregl.Popup({ closeButton: false }).setLngLat((e.features![0].geometry as any).coordinates)
-          .setHTML(`<b>${p.name}</b><br/>Shortfall ${Number(p.pct).toFixed(1)}%${p.res ? `<br/>Reserve P50 ${fmtT(Number(p.res))}` : ""}`).addTo(m);
       });
       m.on("mouseenter", "mines-dot", () => (m.getCanvas().style.cursor = "pointer"));
       m.on("mouseleave", "mines-dot", () => (m.getCanvas().style.cursor = ""));
     };
-    m.isStyleLoaded() ? apply() : m.once("load", apply);
+    onLoaded(m, apply);
   }, [mines, onSelect]);
 
   useEffect(() => {                                            // fly to + highlight selection
     const m = map.current, s = minesRef.current.find((x) => x.code === selected);
     if (!m || !s) return;
-    m.flyTo({ center: [s.lon, s.lat], zoom: 9.5, duration: 900 });
+    if (popup.current && popup.current.code !== selected) { popup.current.p.remove(); popup.current = null; }
+    const view = { center: [s.lon, s.lat] as [number, number], zoom: 9.5 };
+    instant ? m.jumpTo(view) : m.flyTo({ ...view, duration: 900 });
     if (m.getLayer("mines-dot"))
       m.setPaintProperty("mines-dot", "circle-stroke-width", ["case", ["==", ["get", "code"], selected], 3, 1.5]);
   }, [selected]);

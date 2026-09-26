@@ -1,14 +1,15 @@
 # Data directory
 
 Everything here is **downloaded or derived** and is deliberately kept out of git
-(see the root `.gitignore`). This file documents how to re-fetch it, so a fresh
+(see the root `.gitignore`), except the small MRDS exports in `sources/`, which are tracked. This file documents how to re-fetch it, so a fresh
 clone can rebuild the full pipeline.
 
 | Path | What | Size | Where it comes from |
 |---|---|---|---|
 | `EMAG2_V3_UpCont_DataTiff.tif` | EMAG2 v3 magnetic anomaly grid, upward-continued to 4 km | ~229 MB | <https://www.ncei.noaa.gov/products/earth-magnetic-model-anomaly-grid-2> |
-| `mrds-fIN.txt` | USGS MRDS deposit points, filtered to India | ~360 KB | <https://mrdata.usgs.gov/mrds/> (filter: country = India, commodity = Manganese) |
-| `fulltext-search.json` | GSI Bhukosh search export | ~712 KB | <https://bhukosh.gsi.gov.in/Bhukosh/Public> (registration required; delivered by email) |
+| `sources/mrds-fIN.txt` | USGS MRDS deposit points for India, all commodities (manganese is filtered by `build_deposits.py`) | ~360 KB | <https://mrdata.usgs.gov/mrds/> (filter: country = India) |
+| `sources/fulltext-search.json` | USGS MRDS full-text search export (manganese) | ~712 KB | <https://mrdata.usgs.gov/mrds/> full-text search |
+| `deposits.json` | Manganese sites for the map layer and prospectivity labels | ~60 KB | Built by `pipelines/build_deposits.py` |
 | `features/*.tif` | Co-registered model input rasters, one band each | small | Built by `pipelines/extract_features.py` |
 | `interim/` | Scratch space for pre-COG rasters | small | Built by `backend/scripts/predict_raster.py` |
 | `cogs/prospectivity.tif` | Cloud-Optimized GeoTIFF served to the map | small | Built by `backend/scripts/predict_raster.py` |
@@ -17,7 +18,8 @@ clone can rebuild the full pipeline.
 ## Rebuild order
 
 ```bash
-# 1. put EMAG2 + MRDS in data/ (links above)
+# 1. put EMAG2 in data/ (link above); the MRDS exports are already in data/sources/
+python pipelines/build_deposits.py            # -> data/deposits.json
 python pipelines/extract_features.py          # -> data/features/*.tif
 python pipelines/train_prospectivity.py       # -> artifacts/prospectivity.joblib
 python backend/scripts/predict_raster.py      # -> data/cogs/prospectivity.tif

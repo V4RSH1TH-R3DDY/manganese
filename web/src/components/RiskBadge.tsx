@@ -8,7 +8,7 @@ const C: Record<Level, string> = {
 
 export default function RiskBadge({ level }: { level: Level }) {
   return (
-    <span className={`border px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.15em] ${C[level]}`}>
+    <span className={`border px-2 py-0.5 font-mono text-[10px] font-medium uppercase tracking-[0.08em] ${C[level]}`}>
       {level}
     </span>
   );

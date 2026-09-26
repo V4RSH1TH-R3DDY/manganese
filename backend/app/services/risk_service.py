@@ -32,7 +32,9 @@ def compute_risk(db: Session, mine: Mine, horizon: int = 7) -> RiskOut:
         raise HTTPException(503, "No forecast weather rows: run the weather refresh or seed script")
 
     X = fut[bundle["feats"]]
-    q = {a: bundle["q"][a].predict(X).clip(0.0, 1.1) for a in (0.1, 0.5, 0.9)}
+    q = {a: bundle["q"][a].predict(X) for a in (0.1, 0.5, 0.9)}
+    cqr = bundle.get("cqr", 0.0)                 # conformal margin from train_all; widens q10-q90 to ~80% coverage
+    q = {0.1: (q[0.1] - cqr).clip(0.0, 1.1), 0.5: q[0.5].clip(0.0, 1.1), 0.9: (q[0.9] + cqr).clip(0.0, 1.1)}
     q10, q50, q90 = np.minimum(q[0.1], q[0.5]), q[0.5], np.maximum(q[0.9], q[0.5])
     plan = fut.planned.to_numpy()
 

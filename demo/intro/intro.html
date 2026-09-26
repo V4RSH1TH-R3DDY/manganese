@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>MOIL intro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter+Tight:wght@300..700&family=JetBrains+Mono:wght@300..600&display=swap" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
+<style>
+  :root { --bg: #0a0a0a; --ink: #e5e5e5; --ink2: #a3a3a3; --ink3: #737373; --amber: #f59e0b; --red: #ef4444; --sky: #38bdf8; }
+  html, body { margin: 0; background: var(--bg); overflow: hidden; }
+  #stage { position: relative; width: 1600px; height: 900px; overflow: hidden; background: var(--bg);
+    font-family: "Inter Tight", system-ui, sans-serif; color: var(--ink); }
+  .scene { position: absolute; inset: 0; opacity: 0; }
+  .mono { font-family: "JetBrains Mono", ui-monospace, monospace; text-transform: uppercase; letter-spacing: 0.08em; }
+  .serif { font-family: "Instrument Serif", Georgia, serif; font-style: italic; font-weight: 400; }
+  .el { position: absolute; opacity: 0; will-change: transform, opacity, filter; }
+  .tag { position: absolute; right: 36px; bottom: 30px; font-size: 12px; color: var(--ink3); }
+  .source { position: absolute; left: 96px; bottom: 44px; font-size: 13px; color: var(--ink3); }
+  video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .shade { position: absolute; inset: 0; background: linear-gradient(0deg, rgba(10,10,10,.88) 0%, rgba(10,10,10,.35) 45%, rgba(10,10,10,0) 70%); }
+  .placeholder { position: absolute; inset: 0; display: grid; place-items: center;
+    background: radial-gradient(ellipse at 50% 40%, #1c1917 0%, #0a0a0a 70%); }
+  .placeholder div { border: 1px dashed #404040; padding: 18px 26px; color: var(--ink3); font-size: 15px; text-align: center; line-height: 1.7; }
+  .bar { position: absolute; left: 0; top: 0; height: 100%; width: 0; }
+  #map { position: absolute; inset: 0; }
+  .vignette { position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(90deg, rgba(10,10,10,.92) 0%, rgba(10,10,10,.65) 34%, rgba(10,10,10,0) 62%); }
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <!-- S1 0-4: why manganese matters (Higgsfield clip s1) -->
+  <section class="scene" id="s1" data-start="0" data-end="4">
+    <div class="placeholder" id="s1ph"><div class="mono">Higgsfield clip S1<br>molten steel pour · 4 s</div></div>
+    <div class="vignette"></div>
+    <div class="el mono" id="s1a" style="left:96px; top:84px; font-size:14px; color:var(--ink2)">SIH 2026 · PS 26009 · MOIL Ltd</div>
+    <div class="el serif" id="s1b" style="left:96px; top:330px; width:820px; font-size:112px; line-height:1">India's steel runs on <span style="color:var(--amber)">manganese.</span></div>
+    <div class="tag mono el" id="s1t" style="left:96px; right:auto">Illustrative footage</div>
+  </section>
+
+  <!-- S2 4-8: imports vs production -->
+  <section class="scene" id="s2" data-start="4" data-end="8">
+    <div class="el mono" id="s2a" style="left:96px; top:150px; font-size:15px; color:var(--ink3)">Manganese ore · India · 2021–22</div>
+    <div class="el" id="s2r1" style="left:96px; top:250px; width:1400px; height:90px">
+      <div class="mono" style="font-size:15px; color:var(--ink2)">Mined</div>
+      <div style="position:relative; margin-top:14px; height:44px; width:1400px">
+        <div class="bar" id="s2b1" style="background:#737373"></div>
+        <div id="s2v1" style="position:absolute; top:4px; font-size:30px; font-weight:600; font-variant-numeric:tabular-nums"></div>
+      </div>
+    </div>
+    <div class="el" id="s2r2" style="left:96px; top:380px; width:1400px; height:90px">
+      <div class="mono" style="font-size:15px; color:var(--amber)">Imported</div>
+      <div style="position:relative; margin-top:14px; height:44px; width:1400px">
+        <div class="bar" id="s2b2" style="background:var(--amber)"></div>
+        <div id="s2v2" style="position:absolute; top:4px; font-size:30px; font-weight:600; color:var(--amber); font-variant-numeric:tabular-nums"></div>
+      </div>
+    </div>
+    <div class="el serif" id="s2c" style="left:96px; top:560px; font-size:76px; line-height:1.05">We import more than <span style="color:var(--amber)">twice</span> what we mine.</div>
+    <div class="source mono el" id="s2s">Source: Indian Bureau of Mines, Indian Minerals Yearbook 2022 (Manganese Ore)</div>
+  </section>
+
+  <!-- S3 8-12: known resources are mostly unproven (satellite zoom to the belt) -->
+  <section class="scene" id="s3" data-start="8" data-end="12">
+    <div id="map"></div>
+    <div class="vignette"></div>
+    <div class="el mono" id="s3a" style="left:96px; top:190px; font-size:15px; color:var(--ink2)">Known manganese resources</div>
+    <div class="el" id="s3b" style="left:96px; top:228px; font-size:120px; font-weight:600; letter-spacing:-0.02em; font-variant-numeric:tabular-nums">503.6 Mt</div>
+    <div class="el" id="s3c" style="left:96px; top:392px; font-size:34px; color:var(--ink2)">Only <b style="color:var(--ink); font-weight:600">15%</b> are proven reserves.</div>
+    <div class="el serif" id="s3d" style="left:96px; top:470px; font-size:76px; line-height:1.05; width:760px"><span style="color:var(--amber)">85%</span> is still unproven, underground.</div>
+    <div class="source mono el" id="s3s">Source: Indian Bureau of Mines (UNFC, as on 01.04.2020) · Imagery © Esri</div>
+  </section>
+
+  <!-- S4 12-16: operations hit by monsoon and breakdowns (Higgsfield clip s4) -->
+  <section class="scene" id="s4" data-start="12" data-end="16">
+    <div class="placeholder" id="s4ph"><div class="mono">Higgsfield clip S4<br>flooded open pit, stalled dumper · 4 s</div></div>
+    <div class="shade"></div>
+    <div class="el serif" id="s4a" style="left:96px; bottom:200px; font-size:84px; line-height:1">Mines lose output to <span style="color:var(--sky)">monsoon rain</span></div>
+    <div class="el serif" id="s4b" style="left:96px; bottom:110px; font-size:84px; line-height:1">and <span style="color:var(--amber)">equipment breakdowns.</span></div>
+    <div class="tag mono el" id="s4t">Illustrative footage</div>
+  </section>
+
+  <!-- S5 16-20: the shortfall is only seen after the month closes -->
+  <section class="scene" id="s5" data-start="16" data-end="20">
+    <div class="el mono" id="s5a" style="left:96px; top:96px; font-size:15px; color:var(--ink3)">Production vs plan · one month</div>
+    <svg class="el" id="s5svg" style="left:96px; top:150px" width="1408" height="470" viewBox="0 0 1408 470">
+      <g id="s5rain"></g>
+      <line x1="0" x2="1408" y1="120" y2="120" stroke="#525252" stroke-width="2" stroke-dasharray="10 8" />
+      <text x="0" y="104" fill="#737373" font-family="JetBrains Mono" font-size="14" letter-spacing="1">PLAN</text>
+      <path id="s5gap" fill="rgba(239,68,68,0.14)" opacity="0" />
+      <path id="s5line" fill="none" stroke="#f59e0b" stroke-width="4" stroke-linejoin="round" stroke-linecap="round" />
+      <line id="s5end" x1="1400" x2="1400" y1="20" y2="440" stroke="#ef4444" stroke-width="2" opacity="0" />
+      <text id="s5pct" x="1384" y="300" text-anchor="end" fill="#fca5a5" font-family="JetBrains Mono" font-size="18" opacity="0"></text>
+    </svg>
+    <div class="el serif" id="s5b" style="left:96px; top:660px; font-size:80px; line-height:1.05; color:#fecaca">…and it's found only after the month closes.</div>
+    <div class="tag mono el" id="s5t">Illustrative</div>
+  </section>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const easeOut = (u) => 1 - Math.pow(1 - u, 3);
+const easeIO = (u) => (u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2);
+
+// Text / element entrance: fade + rise + de-blur (blur masks the crossfade).
+function appear(id, t, t0, dur = 0.55, rise = 18) {
+  const u = easeOut(clamp((t - t0) / dur)), el = $(id);
+  el.style.opacity = u;
+  el.style.transform = `translateY(${(1 - u) * rise}px)`;
+  el.style.filter = u < 1 ? `blur(${(1 - u) * 6}px)` : "none";
+}
+
+// ── S5 data: an illustrative month, plan 100, dips with the rain ──
+const DAYS = 30, W = 1408, PLAN_Y = 120, Y = (v) => PLAN_Y + (100 - v) * 7.5;
+const actual = Array.from({ length: DAYS }, (_, d) => {
+  const rain = d >= 11 && d <= 18 ? Math.sin(((d - 11) / 7) * Math.PI) : 0;
+  return 99 - 1.5 * Math.sin(d * 1.7) - 38 * rain - (d > 18 ? 6 * Math.exp(-(d - 18) / 4) : 0);
+});
+const X = (d) => (d / (DAYS - 1)) * (W - 8);
+const linePath = actual.map((v, d) => `${d ? "L" : "M"}${X(d).toFixed(1)},${Y(v).toFixed(1)}`).join(" ");
+$("s5line").setAttribute("d", linePath);
+$("s5gap").setAttribute("d", `M0,${PLAN_Y} ` + actual.map((v, d) => `L${X(d).toFixed(1)},${Y(v).toFixed(1)}`).join(" ") + ` L${X(DAYS - 1)},${PLAN_Y} Z`);
+const LEN = $("s5line").getTotalLength();
+const monthGap = actual.reduce((sum, v) => sum + (100 - v), 0) / DAYS;            // label always matches the line
+$("s5pct").textContent = `−${Math.round(monthGap)}% VS PLAN`;
+$("s5line").style.strokeDasharray = LEN;
+for (let d = 11; d <= 18; d++) {
+  const h = 30 + 90 * Math.sin(((d - 11) / 7) * Math.PI);
+  const r = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+  r.setAttribute("x", X(d) - 12); r.setAttribute("y", 0); r.setAttribute("width", 24);
+  r.setAttribute("height", h); r.setAttribute("fill", "rgba(56,189,248,0.35)"); r.dataset.d = d;
+  $("s5rain").appendChild(r);
+}
+
+// ── S3 map ──
+const INDIA = { center: [79.2, 22.6], zoom: 4.1 }, BELT = { center: [79.85, 21.62], zoom: 8.3 };
+const MINES = [[79.266, 21.416], [79.25, 21.383], [79.682, 21.548], [80.233, 21.966], [79.75, 21.516]];
+const map = new maplibregl.Map({
+  container: "map", interactive: false, attributionControl: false, fadeDuration: 0, ...INDIA,
+  style: { version: 8, sources: { sat: { type: "raster", tileSize: 256, tiles: [
+    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"] },
+    mines: { type: "geojson", data: { type: "FeatureCollection", features: MINES.map((c) => ({ type: "Feature", geometry: { type: "Point", coordinates: c } })) } } },
+    layers: [{ id: "sat", type: "raster", source: "sat" },
+      { id: "halo", type: "circle", source: "mines", paint: { "circle-radius": 16, "circle-color": "#f59e0b", "circle-opacity": 0 } },
+      { id: "dot", type: "circle", source: "mines", paint: { "circle-radius": 6, "circle-color": "#f59e0b", "circle-stroke-color": "#0a0a0a", "circle-stroke-width": 1.5, "circle-opacity": 0, "circle-stroke-opacity": 0 } }] },
+});
+window.__fly = () => map.flyTo({ ...BELT, duration: 3400 * (window.__STRETCH || 1), curve: 1.3, essential: true });
+window.__reset = () => map.jumpTo(INDIA);
+window.__mapIdle = () => new Promise((r) => (map.loaded() && map.areTilesLoaded() ? r() : map.once("idle", r)));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// Rehearse the flight once in real time so every satellite tile is cached, then reset.
+window.__warm = async () => {
+  window.__render(9); window.__fly(); await sleep(4500); await window.__mapIdle();
+  window.__reset(); await sleep(1500); await window.__mapIdle();
+};
+window.__cues = [{ t: 8.0, run: () => window.__fly() }];
+
+// ── clips: the recorder sets window.CLIPS = { s1: "clips/_s1.webm", ... } for the ones that exist ──
+const videos = {};
+function mountClips() {
+  for (const [id, src] of Object.entries(window.CLIPS || {})) {
+    const v = document.createElement("video");
+    v.src = src; v.muted = true; v.preload = "auto"; v.playsInline = true;
+    $(id).insertBefore(v, $(id).firstChild); $(id + "ph").remove(); videos[id] = v;
+  }
+}
+window.__ready = async () => {
+  mountClips();
+  await Promise.all(Object.values(videos).map((v) => new Promise((r) => (v.readyState >= 2 ? r() : v.addEventListener("loadeddata", r, { once: true })))));
+  await document.fonts.ready;
+};
+window.__seek = async (t) => {
+  for (const [id, v] of Object.entries(videos)) {
+    const s = $(id), start = +s.dataset.start, end = +s.dataset.end;
+    if (t < start - 0.3 || t > end + 0.3) continue;
+    const target = clamp(t - start, 0, Math.max(0, (v.duration || 4) - 0.04));
+    if (Math.abs(v.currentTime - target) < 1e-3) continue;
+    await new Promise((r) => { const to = setTimeout(r, 1500); v.addEventListener("seeked", () => { clearTimeout(to); r(); }, { once: true }); v.currentTime = target; });
+  }
+};
+
+// ── the timeline: pure function of t (seconds) ──
+const XF = 0.22;   // crossfade between scenes
+window.__render = (t) => {
+  for (const s of document.querySelectorAll(".scene")) {
+    const a = +s.dataset.start, b = +s.dataset.end;
+    const fin = a === 0 ? clamp(t / 0.4) : clamp((t - a + XF / 2) / XF);
+    const fout = b === 20 ? 1 : clamp((b + XF / 2 - t) / XF);
+    s.style.opacity = Math.min(fin, fout);
+    s.style.visibility = +s.style.opacity > 0 ? "visible" : "hidden";
+  }
+  // S1: slow push on the clip
+  const s1v = videos.s1; if (s1v) s1v.style.transform = `scale(${1.04 + 0.04 * clamp(t / 4)})`;
+  appear("s1a", t, 0.3); appear("s1b", t, 0.6, 0.7, 26); appear("s1t", t, 1.0);
+
+  // S2: bars grow, values count up
+  appear("s2a", t, 4.15); appear("s2r1", t, 4.3); appear("s2r2", t, 4.75);
+  const k1 = easeIO(clamp((t - 4.4) / 1.0)), k2 = easeIO(clamp((t - 4.9) / 1.3));
+  const full = 1150, w1 = full * (2.70 / 6.50) * k1, w2 = full * k2;
+  $("s2b1").style.width = w1 + "px"; $("s2b2").style.width = w2 + "px";
+  $("s2v1").style.left = w1 + 18 + "px"; $("s2v2").style.left = w2 + 18 + "px";
+  $("s2v1").textContent = (2.70 * k1).toFixed(2) + " Mt"; $("s2v2").textContent = (6.50 * k2).toFixed(2) + " Mt";
+  appear("s2c", t, 6.25, 0.7, 24); appear("s2s", t, 6.5);
+
+  // S3: text over the fly-in; mine dots light up as it lands
+  appear("s3a", t, 8.25); appear("s3b", t, 8.4, 0.6, 22); appear("s3c", t, 9.25); appear("s3d", t, 10.0, 0.7, 24); appear("s3s", t, 10.2);
+  const md = clamp((t - 11.0) / 0.5);
+  if (map.isStyleLoaded()) {
+    map.setPaintProperty("dot", "circle-opacity", md); map.setPaintProperty("dot", "circle-stroke-opacity", md);
+    map.setPaintProperty("halo", "circle-opacity", 0.3 * md);
+  }
+
+  // S4
+  const s4v = videos.s4; if (s4v) s4v.style.transform = `scale(${1.03 + 0.03 * clamp((t - 12) / 4)})`;
+  appear("s4a", t, 12.35, 0.6, 24); appear("s4b", t, 13.6, 0.6, 24); appear("s4t", t, 12.6);
+
+  // S5: line draws through the month, rain bars drop, gap + verdict at month end
+  appear("s5a", t, 16.15); appear("s5svg", t, 16.2, 0.4, 0); appear("s5t", t, 16.4);
+  const draw = easeIO(clamp((t - 16.3) / 2.0));
+  $("s5line").style.strokeDashoffset = LEN * (1 - draw);
+  const dayNow = draw * (DAYS - 1);
+  for (const r of $("s5rain").children) r.style.opacity = clamp((dayNow - +r.dataset.d + 1) / 1.5) * 1;
+  const late = clamp((t - 18.35) / 0.4);
+  $("s5end").setAttribute("opacity", late); $("s5gap").setAttribute("opacity", late); $("s5pct").setAttribute("opacity", late);
+  appear("s5b", t, 18.45, 0.6, 22);
+};
+window.__render(0);
+</script>
+</body>
+</html>

@@ -33,12 +33,14 @@ If the player is unavailable in your GitHub view, [open or download the short We
 
 ## Run it
 
-Requires Docker Desktop and GNU Make. From the repository folder, copy `.env.example` to `.env` (PowerShell: `Copy-Item .env.example .env`), then start the demo:
+Requires GNU Make, Node 20+, and Python 3.12 (or [uv](https://docs.astral.sh/uv/), which fetches it). No Docker or `.env` needed. From the repository folder:
 
 ```bash
-make up seed train run
+make          # install, seed demo data, train, precompute, then start API + dashboard
 ```
 
-Open <http://localhost:5173>. The API explorer is at <http://localhost:8000/docs>.
+Open <http://localhost:5173>. The API explorer is at <http://localhost:8000/docs>. `make help` lists every step; re-run `make data` on the day you demo, since the scripted storm is placed 3–5 days after seeding.
 
 **Five MOIL mines. One clearer path from uncertainty to action.**
+
+The 3:30 pitch video (problem, solution, live prototype, roadmap) is rendered from [`demo/`](demo/README.md); the read-along voiceover is [`demo/VOICEOVER.md`](demo/VOICEOVER.md).

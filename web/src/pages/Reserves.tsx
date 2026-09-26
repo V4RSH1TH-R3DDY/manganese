@@ -4,12 +4,14 @@ import ReactECharts from "echarts-for-react";
 import { api, type Reserve } from "../lib/api";
 import { fmtT } from "../lib/format";
 import { QueryError } from "../components/Insights";
+import { CHART_MONO, CHART_SANS, useFontsReady } from "../lib/fonts";
 
 const AXIS = { axisLabel: { color: "#737373", fontSize: 11 }, axisLine: { lineStyle: { color: "#262626" } } };
-const HEAD = "text-[10px] uppercase tracking-[0.15em] text-neutral-500";
+const HEAD = "font-mono text-[10px] uppercase tracking-[0.08em] text-neutral-500";
 
 export default function Reserves() {
   const queryClient = useQueryClient();
+  const fonts = useFontsReady();
   const mines = useQuery({ queryKey: ["mines"], queryFn: api.mines });
   const [selectedMineCode, setSelectedMineCode] = useState<string | null>(null);
   const [cutoffVal, setCutoffVal] = useState<number>(25.0);
@@ -41,13 +43,13 @@ export default function Reserves() {
   }, [selectedMine?.mine]);
 
   const option: any = {
-    backgroundColor: "transparent",
+    backgroundColor: "transparent", textStyle: { fontFamily: fonts ? CHART_MONO : undefined },
     tooltip: { trigger: "axis", backgroundColor: "#0a0a0a", borderColor: "#404040", borderWidth: 1,
-      textStyle: { color: "#e5e5e5", fontSize: 12 } },
+      textStyle: { color: "#e5e5e5", fontSize: 12, fontFamily: fonts ? CHART_SANS : undefined } },
     legend: { itemWidth: 10, itemHeight: 10, textStyle: { color: "#737373", fontSize: 11 } },
     grid: { left: 60, right: 16, top: 36, bottom: 28 },
     xAxis: { type: "category", data: d.map((r) => r.mine), ...AXIS },
-    yAxis: { type: "value", name: "tonnes", nameTextStyle: { color: "#737373", fontSize: 11 }, ...AXIS,
+    yAxis: { type: "value", ...AXIS, axisLabel: { ...AXIS.axisLabel, formatter: (v: number) => fmtT(v) },
       splitLine: { lineStyle: { color: "#1c1c1c" } } },
     series: [["P10 (pessimistic)", "p10_t", "#525252"], ["P50", "p50_t", "#38bdf8"], ["P90 (optimistic)", "p90_t", "#22c55e"]]
       .map(([name, key, color]) => ({ name, type: "bar", itemStyle: { color }, data: d.map((r: any) => Math.round(r[key])) })),
@@ -60,14 +62,14 @@ export default function Reserves() {
   };
 
   const histOption: any = selectedMine ? {
-    backgroundColor: "transparent",
+    backgroundColor: "transparent", textStyle: { fontFamily: fonts ? CHART_MONO : undefined },
     tooltip: { trigger: "axis", backgroundColor: "#0a0a0a", borderColor: "#404040", borderWidth: 1,
-      textStyle: { color: "#e5e5e5", fontSize: 12 } },
+      textStyle: { color: "#e5e5e5", fontSize: 12, fontFamily: fonts ? CHART_SANS : undefined } },
     title: { text: `Grade distribution (${selectedMine.mine} @ ≥${selectedMine.cutoff}% Mn)`, textStyle: { color: "#737373", fontSize: 12, fontWeight: "normal" } },
     grid: { left: 60, right: 16, top: 36, bottom: 28 },
     xAxis: { type: "category", data: selectedMine.grade_hist_x.map((x: number) => x.toFixed(1) + "%"), ...AXIS, name: "Mn %",
       nameTextStyle: { color: "#737373", fontSize: 11 } },
-    yAxis: { type: "value", name: "tonnes", nameTextStyle: { color: "#737373", fontSize: 11 }, ...AXIS,
+    yAxis: { type: "value", ...AXIS, axisLabel: { ...AXIS.axisLabel, formatter: (v: number) => fmtT(v) },
       splitLine: { lineStyle: { color: "#1c1c1c" } } },
     series: [{ type: "bar", data: selectedMine.grade_hist_y, itemStyle: { color: "#8b5cf6" }, barWidth: "90%" }],
   } : {};
@@ -75,7 +77,7 @@ export default function Reserves() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-base font-medium">Reserve estimates <span className="text-neutral-500">(3D Ordinary Kriging, approximate P10–P90)</span></h2>
+        <h2 className="text-base font-medium">Reserve estimates <span className="font-display text-[20px] font-normal italic text-neutral-400">3D ordinary kriging, approximate P10–P90</span></h2>
         {selectedMine && (
           <div className="flex items-center gap-2 text-xs">
             <span className="text-neutral-400">Mine: <b className="text-neutral-200">{selectedMine.mine}</b></span>

@@ -11,10 +11,6 @@ services:
     # whole data/ is mounted so predict_raster.py can read /data/features and write /data/cogs
     volumes: ["./backend/artifacts:/app/artifacts", "./data:/data"]
     ports: ["8000:8000"]
-  titiler:
-    image: ghcr.io/developmentseed/titiler:latest
-    volumes: ["./data/cogs:/data/cogs:ro"]
-    ports: ["8001:8000"]
   web:
     build: ./web
     ports: ["5173:80"]

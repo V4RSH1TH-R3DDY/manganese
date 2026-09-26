@@ -37,11 +37,23 @@ def main():
     clf = lgb.LGBMClassifier(n_estimators=300, learning_rate=0.03, verbose=-1).fit(
         tr[FEATS], (tr.eff < 0.9).astype(int))
 
-    p10, p50, p90 = (q[a].predict(va[FEATS]) for a in (0.1, 0.5, 0.9))
-    print("pinball q50:", pinball(va.eff.values, p50, 0.5))
-    print("coverage 10-90:", float(((va.eff >= p10) & (va.eff <= p90)).mean()), "(target ≈ 0.80)")
+    # Conformalized quantile regression: the raw q10-q90 band under-covers, so widen it by
+    # the margin that makes it cover 80% of a held-out calibration slice (first half of the
+    # validation period), then report coverage on the untouched second half.
+    half = va.date.iloc[len(va) // 2]
+    cal, test = va[va.date < half], va[va.date >= half]
+    c10, c90 = q[0.1].predict(cal[FEATS]), q[0.9].predict(cal[FEATS])
+    scores = np.maximum(c10 - cal.eff.values, cal.eff.values - c90)
+    level = min(1.0, np.ceil((len(scores) + 1) * 0.8) / len(scores))
+    cqr = float(max(0.0, np.quantile(scores, level)))
+
+    p10, p50, p90 = (q[a].predict(test[FEATS]) for a in (0.1, 0.5, 0.9))
+    y = test.eff.values
+    print("pinball q50:", pinball(y, p50, 0.5))
+    print(f"coverage 10-90: raw {float(((y >= p10) & (y <= p90)).mean()):.3f}, "
+          f"calibrated {float(((y >= p10 - cqr) & (y <= p90 + cqr)).mean()):.3f} (target 0.80, margin {cqr:.3f})")
     Path(settings.model_dir).mkdir(parents=True, exist_ok=True)
-    joblib.dump({"q": q, "clf": clf, "feats": FEATS}, Path(settings.model_dir) / "shortfall.joblib")
+    joblib.dump({"q": q, "clf": clf, "feats": FEATS, "cqr": cqr}, Path(settings.model_dir) / "shortfall.joblib")
 
 
 if __name__ == "__main__":

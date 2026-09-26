@@ -1,0 +1,4 @@
+clips/_*
+clips/*.mp4
+clips/*.mov
+clips/*.webm

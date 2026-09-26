@@ -1,5 +1,4 @@
 import hashlib
-import io
 import pandas as pd
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
 from sqlalchemy import delete, select

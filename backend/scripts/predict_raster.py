@@ -50,6 +50,10 @@ def main():
     if not paths:
         raise SystemExit(f"no feature rasters in {feature_dir}")
 
+    if expected_features and [p.stem for p in paths] != list(expected_features):
+        raise SystemExit(f"feature rasters {[p.stem for p in paths]} do not match the model's "
+                         f"training features {list(expected_features)}; rebuild with pipelines/extract_features.py")
+
     print(f"Loading {len(paths)} feature rasters from {feature_dir}...")
     arrs = [rasterio.open(p).read(1).astype("float32") for p in paths]
     prof = rasterio.open(paths[0]).profile.copy()
