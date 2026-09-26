@@ -53,6 +53,11 @@ dark bottom gradient for the text. Keep the lower third fairly clean: that's whe
 > dump truck, rain in the light beam, reflections in muddy puddles, slight handheld motion, photoreal,
 > no text, no logos.
 
+**Current clips (26 Sep):** S1 is a 360×640 vertical phone clip of an induction-furnace pour (first
+4 s), laid out as a portrait panel over a blurred copy of itself so it isn't upscaled 4×. S4 is a
+Flow/Veo clip; its bottom-right sparkle watermark is cropped out (1120×630 window). Both treatments
+live in `FX` in `record_intro.mjs`.
+
 Tips: generate 3–4 variants and pick the one with the slowest, steadiest camera. Fast motion fights
 the text. Keep the "Illustrative footage" tag; it tells judges these shots are AI visuals, not MOIL
 footage.

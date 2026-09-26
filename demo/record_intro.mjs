@@ -17,7 +17,18 @@ const CLIPS = path.join(INTRO, "clips");
 const OUT = path.join(HERE, "out");
 const FPS = 60, DUR = 20, VW = 1600, VH = 900;
 
-// ── clips: transcode to all-keyframe VP9 so every per-frame seek is exact and fast ──
+// ── clips: per-shot treatment, then all-keyframe VP9 so every per-frame seek is exact and fast ──
+const FILL = `scale=${VW}:${VH}:force_original_aspect_ratio=increase:flags=lanczos,crop=${VW}:${VH}`;
+const FX = {
+  // Vertical 360x640 phone clip: a sharp portrait panel on the right over a blurred, darkened copy
+  // of itself (fills 16:9 with the furnace glow without upscaling the subject 4x). Uses 0-4.6 s.
+  s1: `[0:v]split=2[a][b];[a]${FILL},gblur=sigma=38,eq=brightness=-0.16:saturation=1.25[bg];` +
+      `[b]scale=-2:780:flags=lanczos,unsharp=5:5:0.7,pad=iw+2:ih+2:1:1:color=0x404040[fg];` +
+      `[bg][fg]overlay=x=W-w-150:y=(H-h)/2,fps=30[out]`,
+  // Flow/Veo clip: crop away the bottom-right sparkle watermark (~x1140-1180, y580-620 of 1280x720),
+  // keeping 16:9; the 1.14x crop reads as part of the push-in.
+  s4: `[0:v]crop=1120:630:10:0,${FILL},fps=30[out]`,
+};
 const clips = {};
 for (const id of ["s1", "s4"]) {
   const src = fs.readdirSync(CLIPS).find((f) => f.startsWith(id + ".") && !f.startsWith("_"));
@@ -26,7 +37,7 @@ for (const id of ["s1", "s4"]) {
   if (!fs.existsSync(out) || fs.statSync(out).mtimeMs < fs.statSync(inp).mtimeMs) {
     console.log(`  ${id}: transcoding ${src}`);
     const r = spawnSync("ffmpeg", ["-y", "-loglevel", "error", "-i", inp, "-t", "4.6", "-an",
-      "-vf", `scale=${VW}:${VH}:force_original_aspect_ratio=increase,crop=${VW}:${VH},fps=30`,
+      "-filter_complex", FX[id] ?? `[0:v]${FILL},fps=30[out]`, "-map", "[out]",
       "-c:v", "libvpx-vp9", "-crf", "18", "-b:v", "0", "-g", "1", "-deadline", "good", "-cpu-used", "4", out], { stdio: "inherit" });
     if (r.status !== 0) throw new Error(`ffmpeg failed on ${src}`);
   }
