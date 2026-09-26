@@ -50,7 +50,7 @@ State this script was written against (seeded **26 Sep 2026**):
 Reserve P50, Dongri Buzurg: **8.54 Mt** (P10–P90 8.26–8.89 Mt, mean grade 31.2 % Mn). The synthetic
 orebody's true tonnage is ~7.5 Mt, so the kriged P50 is within ~14 %.
 
-If you re-seed on another day, check `demo/out/cues/*.jpg` and update the numbers in the VO lines.
+If you re-seed on another day, check `demo/out/cues_demo/*.jpg` and update the numbers in the VO lines.
 If the Redeploy card lands on a different mine, run the recorder with `REDEPLOY_MINE=<name>`.
 
 ---
@@ -117,4 +117,4 @@ node record.mjs --preview                                   # quick 30 fps, 1× 
 ```
 
 The recorder prints each beat's actual time next to the planned time here, and saves one still per
-beat to `demo/out/cues/` so you can check every number before the voiceover session.
+beat to `demo/out/cues_demo/` so you can check every number before the voiceover session.

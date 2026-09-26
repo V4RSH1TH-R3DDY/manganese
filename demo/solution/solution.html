@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>MOIL solution</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter+Tight:wght@300..700&family=JetBrains+Mono:wght@300..600&display=swap" rel="stylesheet" />
+<style>
+  :root { --bg: #0a0a0a; --ink: #e5e5e5; --ink2: #a3a3a3; --ink3: #737373; --line: #262626;
+    --amber: #f59e0b; --sky: #38bdf8; --green: #22c55e; }
+  html, body { margin: 0; background: var(--bg); overflow: hidden; }
+  #stage { position: relative; width: 1600px; height: 900px; overflow: hidden; background: var(--bg);
+    font-family: "Inter Tight", system-ui, sans-serif; color: var(--ink); }
+  .scene { position: absolute; inset: 0; opacity: 0; }
+  .mono { font-family: "JetBrains Mono", ui-monospace, monospace; text-transform: uppercase; letter-spacing: 0.08em; }
+  .serif { font-family: "Instrument Serif", Georgia, serif; font-style: italic; font-weight: 400; }
+  .el { position: absolute; opacity: 0; will-change: transform, opacity, filter; }
+
+  /* P1 title */
+  #bd { position: absolute; inset: -40px; background: url(assets/dashboard.png) center/cover; filter: blur(7px) saturate(0.9); }
+  #bdShade { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 50%, rgba(10,10,10,.72) 0%, rgba(10,10,10,.94) 70%); }
+
+  /* P2 pipeline */
+  .card { position: absolute; top: 170px; width: 440px; }
+  .card .k { font-size: 14px; color: var(--ink3); }
+  .card .h { margin-top: 14px; font-size: 44px; line-height: 1.05; height: 96px; }
+  .card .img { margin-top: 22px; width: 440px; height: 340px; border: 1px solid var(--line); background: #111 center/cover no-repeat;
+    transition: none; }
+  .card .in { margin-top: 18px; font-size: 13px; color: var(--ink2); line-height: 1.7; }
+  .conn { position: absolute; top: 489px; height: 2px; background: var(--ink3); transform-origin: 0 50%; }
+  .conn::after { content: ""; position: absolute; right: -2px; top: -5px; border: 6px solid transparent; border-left: 9px solid var(--ink3); }
+
+  /* P3 innovations */
+  .inn { position: absolute; width: 640px; }
+  .inn .n { font-size: 14px; color: var(--ink3); }
+  .inn .t { margin-top: 8px; font-size: 46px; font-weight: 600; letter-spacing: -0.01em; }
+  .inn .s { margin-top: 6px; font-size: 30px; color: var(--ink2); }
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <!-- P1 0-6: name + promise, over the live dashboard -->
+  <section class="scene" id="p1" data-start="0" data-end="6">
+    <div id="bd"></div><div id="bdShade"></div>
+    <div class="el mono" id="p1a" style="left:0; right:0; top:270px; text-align:center; font-size:15px; color:var(--ink3)">Introducing</div>
+    <div class="el" id="p1b" style="left:0; right:0; top:318px; text-align:center">
+      <span class="mono" style="font-size:40px; font-weight:500; letter-spacing:0.16em; vertical-align:middle">MOIL Manganese</span>
+      <span class="serif" style="font-size:150px; vertical-align:middle; margin-left:14px">Copilot</span>
+    </div>
+    <div class="el" id="p1c" style="left:0; right:0; top:520px; text-align:center; font-size:36px; color:var(--ink2)">One system, from the <span class="serif" style="color:var(--ink); font-size:44px">ore body</span> to the <span class="serif" style="color:var(--ink); font-size:44px">shift plan.</span></div>
+    <div class="el mono" id="p1d" style="left:0; right:0; top:620px; text-align:center; font-size:14px; color:var(--ink3)">Satellite + geophysics · Drill data · Weather + fleet</div>
+  </section>
+
+  <!-- P2 6-18: three connected stages, each with the real app view -->
+  <section class="scene" id="p2" data-start="6" data-end="18">
+    <div class="el mono" id="p2t" style="left:110px; top:84px; font-size:14px; color:var(--ink3)">Three connected stages</div>
+    <div class="card el" id="c1" style="left:110px">
+      <div class="k mono">01 · Where to look</div>
+      <div class="h serif">Rank prospective ground <span style="color:var(--amber)">from space.</span></div>
+      <div class="img" style="background-image:url(assets/map.png)"></div>
+      <div class="in mono">EMAG2 magnetics · USGS MRDS deposits<br>LightGBM · spatial block CV</div>
+    </div>
+    <div class="conn el" id="k1" style="left:562px; width:44px"></div>
+    <div class="card el" id="c2" style="left:580px">
+      <div class="k mono">02 · How much is there</div>
+      <div class="h serif">Turn drill assays into tonnes <span style="color:var(--sky)">with a range.</span></div>
+      <div class="img" style="background-image:url(assets/reserves.png)"></div>
+      <div class="in mono">3D ordinary kriging<br>P10 · P50 · P90 tonnes</div>
+    </div>
+    <div class="conn el" id="k2" style="left:1032px; width:44px"></div>
+    <div class="card el" id="c3" style="left:1050px">
+      <div class="k mono">03 · Will we hit the plan</div>
+      <div class="h serif">Forecast the shortfall, <span style="color:var(--green)">then fix it.</span></div>
+      <div class="img" style="background-image:url(assets/forecast.png); background-position:100% 0%"></div>
+      <div class="in mono">ERA5 + Open-Meteo · quantile LightGBM<br>PuLP fleet optimizer · what-if</div>
+    </div>
+  </section>
+
+  <!-- P3 18-26: what's new -->
+  <section class="scene" id="p3" data-start="18" data-end="26">
+    <div class="el mono" id="p3t" style="left:110px; top:150px; font-size:14px; color:var(--ink3)">What makes it different</div>
+    <div class="inn el" id="i1" style="left:110px; top:220px"><div class="n mono">01</div><div class="t">Spatially validated</div><div class="s serif">tested on ground it has never seen</div></div>
+    <div class="inn el" id="i2" style="left:850px; top:220px"><div class="n mono">02</div><div class="t">Ranges, not guesses</div><div class="s serif">P10 / P50 / P90 tonnes and forecast bands</div></div>
+    <div class="inn el" id="i3" style="left:110px; top:440px"><div class="n mono">03</div><div class="t">Explains the why</div><div class="s serif">weather vs equipment, for every dip</div></div>
+    <div class="inn el" id="i4" style="left:850px; top:440px"><div class="n mono">04</div><div class="t">Simulates before you act</div><div class="s serif">tonnes recovered, for every action</div></div>
+    <div class="el" id="p3r" style="left:110px; top:655px; width:1380px; height:1px; background:var(--line)"></div>
+    <div class="el serif" id="p3z" style="left:110px; top:685px; font-size:64px">Actions, <span style="color:var(--green)">not alerts.</span></div>
+  </section>
+
+  <!-- P4 26-30: bookend to the intro, hand-off to the live demo -->
+  <section class="scene" id="p4" data-start="26" data-end="30">
+    <div class="el serif" id="p4a" style="left:0; right:0; top:300px; text-align:center; font-size:96px; line-height:1">Decide <span style="color:var(--green)">before</span> the shortfall,</div>
+    <div class="el serif" id="p4b" style="left:0; right:0; top:410px; text-align:center; font-size:96px; line-height:1; color:var(--ink2)">not after the month closes.</div>
+    <div class="el mono" id="p4c" style="left:0; right:0; top:590px; text-align:center; font-size:15px; color:var(--ink3)">Live prototype →</div>
+  </section>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const easeOut = (u) => 1 - Math.pow(1 - u, 3);
+const easeIO = (u) => (u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2);
+function appear(id, t, t0, dur = 0.55, rise = 18) {
+  const u = easeOut(clamp((t - t0) / dur)), el = $(id);
+  el.style.opacity = u;
+  el.style.transform = `translateY(${(1 - u) * rise}px)`;
+  el.style.filter = u < 1 ? `blur(${(1 - u) * 6}px)` : "none";
+  return u;
+}
+// Stage cards: the active one is full strength and ringed, earlier ones settle back.
+function stage(id, t, t0, tNext) {
+  const u = appear(id, t, t0, 0.6, 24), el = $(id), img = el.querySelector(".img");
+  const settle = tNext == null ? 0 : easeIO(clamp((t - tNext) / 0.6));
+  el.style.opacity = u * (1 - 0.35 * settle);
+  img.style.borderColor = settle < 0.5 && u > 0.5 ? "#525252" : "#262626";
+  img.style.transform = `scale(${1 + 0.03 * (1 - settle) * easeOut(clamp((t - t0) / 3.5))})`;
+}
+function connector(id, t, t0) {
+  const u = easeIO(clamp((t - t0) / 0.5)), el = $(id);
+  el.style.opacity = u > 0 ? 1 : 0; el.style.transform = `scaleX(${u})`; el.style.filter = "none";
+}
+
+const XF = 0.25, END = 30;
+window.__ready = async () => {                 // backgrounds are CSS, so decode the files up front
+  await document.fonts.ready;
+  await Promise.all(["dashboard", "map", "reserves", "forecast"].map((n) => {
+    const im = new Image(); im.src = `assets/${n}.png`; return im.decode();
+  }));
+};
+window.__render = (t) => {
+  for (const s of document.querySelectorAll(".scene")) {
+    const a = +s.dataset.start, b = +s.dataset.end;
+    const fin = a === 0 ? clamp(t / 0.35) : clamp((t - a + XF / 2) / XF);
+    const fout = b === END ? 1 : clamp((b + XF / 2 - t) / XF);
+    s.style.opacity = Math.min(fin, fout);
+    s.style.visibility = +s.style.opacity > 0 ? "visible" : "hidden";
+  }
+  // P1: dashboard drifts back while the name resolves
+  $("bd").style.transform = `scale(${1.1 - 0.06 * easeOut(clamp(t / 6))})`;
+  appear("p1a", t, 0.3); appear("p1b", t, 0.6, 0.8, 26); appear("p1c", t, 1.8, 0.7); appear("p1d", t, 3.2);
+
+  // P2: stages arrive one by one, connectors draw between them
+  appear("p2t", t, 6.15);
+  stage("c1", t, 6.3, 9.9); connector("k1", t, 9.5);
+  stage("c2", t, 9.9, 13.5); connector("k2", t, 13.1);
+  stage("c3", t, 13.5, 16.8);
+
+  // P3: four differentiators, then the line
+  appear("p3t", t, 18.2);
+  appear("i1", t, 18.5, 0.6, 22); appear("i2", t, 19.7, 0.6, 22); appear("i3", t, 20.9, 0.6, 22); appear("i4", t, 22.1, 0.6, 22);
+  appear("p3r", t, 23.3, 0.5, 0); appear("p3z", t, 23.6, 0.7, 24);
+
+  // P4
+  appear("p4a", t, 26.3, 0.7, 26); appear("p4b", t, 27.3, 0.7, 26); appear("p4c", t, 28.4);
+};
+window.__render(0);
+</script>
+</body>
+</html>

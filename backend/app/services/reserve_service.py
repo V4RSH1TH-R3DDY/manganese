@@ -1,5 +1,7 @@
 import datetime as dt
+from unittest import mock
 import numpy as np
+import pykrige.ok3d as ok3d_mod
 from pykrige.ok3d import OrdinaryKriging3D
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
@@ -13,6 +15,14 @@ SELECT (h.collar_lon * 111320.0 * cos(radians(h.collar_lat))) AS x,
        a.mn_pct AS g
 FROM assays a JOIN drillholes h ON h.id = a.hole_id WHERE h.mine_id = :m
 """)
+
+
+def _skip_fit_statistics(X, y, *args, **kwargs):
+    """PyKrige always runs a leave-one-out fit check (Q1/Q2/cR) in the constructor: one n x n
+    solve per assay, ~40 s for 1,500 assays. We never read those diagnostics and execute()
+    doesn't use them, so return neutral values."""
+    n = len(y)
+    return np.zeros(n), np.ones(n), np.zeros(n)
 
 
 def latest_reserve(db: Session, mine: Mine) -> ReserveEstimate | None:
@@ -36,12 +46,13 @@ def estimate_reserve(db: Session, mine: Mine, cutoff=25.0, density=3.6, n_sim=10
     # ~250 m across but ~20 m thick, so stretch z by 12.5 to give a ~20 m vertical range.
     # Isotropic kriging smeared ore into the waste above and below the lens.
     sill = float(g.var()) if g.var() > 0 else 10.0
-    ok = OrdinaryKriging3D(
-        x, y, z, g,
-        variogram_model="spherical",
-        variogram_parameters=[sill, 250.0, 0.05],
-        anisotropy_scaling_z=12.5,
-    )
+    with mock.patch.object(ok3d_mod, "_find_statistics", _skip_fit_statistics):
+        ok = OrdinaryKriging3D(
+            x, y, z, g,
+            variogram_model="spherical",
+            variogram_parameters=[sill, 250.0, 0.05],
+            anisotropy_scaling_z=12.5,
+        )
 
     dx, dz = 35.0, 5.0
     gx = np.arange(x.min(), x.max() + dx, dx)

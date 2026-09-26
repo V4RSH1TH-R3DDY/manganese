@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>MOIL outro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter+Tight:wght@300..700&family=JetBrains+Mono:wght@300..600&display=swap" rel="stylesheet" />
+<style>
+  :root { --bg: #0a0a0a; --ink: #e5e5e5; --ink2: #a3a3a3; --ink3: #737373; --line: #262626;
+    --amber: #f59e0b; --sky: #38bdf8; --green: #22c55e; }
+  html, body { margin: 0; background: var(--bg); overflow: hidden; }
+  #stage { position: relative; width: 1600px; height: 900px; overflow: hidden; background: var(--bg);
+    font-family: "Inter Tight", system-ui, sans-serif; color: var(--ink); }
+  .scene { position: absolute; inset: 0; opacity: 0; }
+  .mono { font-family: "JetBrains Mono", ui-monospace, monospace; text-transform: uppercase; letter-spacing: 0.08em; }
+  .serif { font-family: "Instrument Serif", Georgia, serif; font-style: italic; font-weight: 400; }
+  .el { position: absolute; opacity: 0; will-change: transform, opacity, filter; }
+  .source { position: absolute; left: 110px; bottom: 44px; font-size: 13px; color: var(--ink3); }
+
+  .stat { position: absolute; top: 200px; width: 420px; }
+  .stat .v { font-size: 104px; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; line-height: 1; }
+  .stat .l { margin-top: 14px; font-size: 15px; color: var(--ink2); }
+
+  #rail { position: absolute; left: 110px; top: 400px; width: 1380px; height: 2px; background: var(--ink3); transform-origin: 0 50%; }
+  .node { position: absolute; top: 392px; width: 18px; height: 18px; border-radius: 50%; background: var(--bg); border: 2px solid var(--ink2); }
+  .phase { position: absolute; top: 450px; width: 420px; }
+  .phase .k { font-size: 14px; color: var(--ink3); }
+  .phase .t { margin-top: 10px; font-size: 64px; line-height: 1; }
+  .phase .d { margin-top: 18px; font-size: 26px; color: var(--ink2); line-height: 1.4; }
+
+  #endbg { position: absolute; inset: -40px; background: url(../solution/assets/map.png) center/cover; filter: blur(10px) saturate(1.1); }
+  #endShade { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 50%, rgba(10,10,10,.70) 0%, rgba(10,10,10,.95) 72%); }
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <!-- O1 0-6: market impact -->
+  <section class="scene" id="o1" data-start="0" data-end="6">
+    <div class="el mono" id="o1t" style="left:110px; top:120px; font-size:15px; color:var(--ink3)">The opportunity · India · 2021–22</div>
+    <div class="stat el" id="m1" style="left:110px"><div class="v" id="v1">127</div><div class="l mono">Reporting manganese mines</div></div>
+    <div class="stat el" id="m2" style="left:590px"><div class="v" id="v2">2.70 Mt</div><div class="l mono">Mined</div></div>
+    <div class="stat el" id="m3" style="left:1070px"><div class="v" id="v3" style="color:var(--amber)">6.50 Mt</div><div class="l mono">Imported</div></div>
+    <div class="el" id="o1r" style="left:110px; top:470px; width:1380px; height:1px; background:var(--line)"></div>
+    <div class="el serif" id="o1a" style="left:110px; top:520px; font-size:70px; line-height:1.05; color:var(--ink2)">Recover just 1% of India's output:</div>
+    <div class="el serif" id="o1b" style="left:110px; top:610px; font-size:96px; line-height:1.05"><span style="color:var(--green)">≈ 27,000 t</span> less to import.</div>
+    <div class="source mono el" id="o1s">Source: Indian Bureau of Mines, Indian Minerals Yearbook 2022 (Manganese Ore) · 1% of 2,696 kt</div>
+  </section>
+
+  <!-- O2 6-12: roadmap -->
+  <section class="scene" id="o2" data-start="6" data-end="12">
+    <div class="el mono" id="o2t" style="left:110px; top:260px; font-size:15px; color:var(--ink3)">Roadmap</div>
+    <div class="el" id="rail"></div>
+    <div class="node el" id="n1" style="left:110px"></div>
+    <div class="node el" id="n2" style="left:590px"></div>
+    <div class="node el" id="n3" style="left:1070px"></div>
+    <div class="phase el" id="p1" style="left:110px"><div class="k mono">0–3 months</div><div class="t serif">Pilot</div>
+      <div class="d">MOIL's live data at one or two mines;<br>validate forecasts month by month</div></div>
+    <div class="phase el" id="p2" style="left:590px"><div class="k mono">3–9 months</div><div class="t serif" style="color:var(--sky)">Scale</div>
+      <div class="d">Every MOIL mine; Sentinel-2 and<br>ASTER spectra in the prospectivity model</div></div>
+    <div class="phase el" id="p3" style="left:1070px"><div class="k mono">9+ months</div><div class="t serif" style="color:var(--green)">Expand</div>
+      <div class="d">Other PSUs and minerals (iron ore,<br>chromite, bauxite) as a service</div></div>
+  </section>
+
+  <!-- O3 12-16: end card -->
+  <section class="scene" id="o3" data-start="12" data-end="16">
+    <div id="endbg"></div><div id="endShade"></div>
+    <div class="el" id="e1" style="left:0; right:0; top:300px; text-align:center">
+      <span class="mono" style="font-size:40px; font-weight:500; letter-spacing:0.16em; vertical-align:middle">MOIL Manganese</span>
+      <span class="serif" style="font-size:150px; vertical-align:middle; margin-left:14px">Copilot</span>
+    </div>
+    <div class="el serif" id="e2" style="left:0; right:0; top:500px; text-align:center; font-size:52px; color:var(--ink2)">
+      Where to <span style="color:var(--amber)">explore</span>. How <span style="color:var(--sky)">much</span>. How to <span style="color:var(--green)">hit the plan</span>.</div>
+    <div class="el mono" id="e3" style="left:0; right:0; top:640px; text-align:center; font-size:15px; color:var(--ink3)">SIH 2026 · PS 26009 · MOIL Ltd, Ministry of Steel</div>
+  </section>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const easeOut = (u) => 1 - Math.pow(1 - u, 3);
+const easeIO = (u) => (u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2);
+function appear(id, t, t0, dur = 0.55, rise = 18) {
+  const u = easeOut(clamp((t - t0) / dur)), el = $(id);
+  el.style.opacity = u;
+  el.style.transform = `translateY(${(1 - u) * rise}px)`;
+  el.style.filter = u < 1 ? `blur(${(1 - u) * 6}px)` : "none";
+  return u;
+}
+const countUp = (id, t, t0, to, fmt) => { $(id).textContent = fmt(to * easeOut(clamp((t - t0) / 0.9))); };
+
+const XF = 0.25, END = 16;
+window.__ready = async () => {
+  await document.fonts.ready;
+  const im = new Image(); im.src = "../solution/assets/map.png"; await im.decode();
+};
+window.__render = (t) => {
+  for (const s of document.querySelectorAll(".scene")) {
+    const a = +s.dataset.start, b = +s.dataset.end;
+    const fin = a === 0 ? clamp(t / 0.35) : clamp((t - a + XF / 2) / XF);
+    const fout = b === END ? 1 : clamp((b + XF / 2 - t) / XF);
+    s.style.opacity = Math.min(fin, fout);
+    s.style.visibility = +s.style.opacity > 0 ? "visible" : "hidden";
+  }
+  // O1: the three numbers count up, then the 1% line
+  appear("o1t", t, 0.15);
+  appear("m1", t, 0.3); countUp("v1", t, 0.3, 127, (v) => Math.round(v));
+  appear("m2", t, 0.6); countUp("v2", t, 0.6, 2.70, (v) => v.toFixed(2) + " Mt");
+  appear("m3", t, 0.9); countUp("v3", t, 0.9, 6.50, (v) => v.toFixed(2) + " Mt");
+  appear("o1r", t, 2.1, 0.5, 0); appear("o1a", t, 2.3, 0.6, 20); appear("o1b", t, 3.2, 0.7, 24); appear("o1s", t, 3.6);
+
+  // O2: the rail draws, each phase lands on its node
+  appear("o2t", t, 6.15);
+  const r = easeIO(clamp((t - 6.3) / 2.6)); $("rail").style.opacity = r > 0 ? 1 : 0; $("rail").style.transform = `scaleX(${r})`;
+  appear("n1", t, 6.35, 0.3, 0); appear("p1", t, 6.5, 0.6, 22);
+  appear("n2", t, 7.4, 0.3, 0); appear("p2", t, 7.55, 0.6, 22);
+  appear("n3", t, 8.45, 0.3, 0); appear("p3", t, 8.6, 0.6, 22);
+
+  // O3: end card over the prospectivity map
+  $("endbg").style.transform = `scale(${1.12 - 0.06 * easeOut(clamp((t - 12) / 4))})`;
+  appear("e1", t, 12.3, 0.8, 26); appear("e2", t, 13.2, 0.7, 20); appear("e3", t, 14.0);
+};
+window.__render(0);
+</script>
+</body>
+</html>

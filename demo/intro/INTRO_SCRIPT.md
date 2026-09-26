@@ -5,7 +5,7 @@ AI footage from Higgsfield (S1, S4). Until those clips exist, the render shows l
 so you can review timing first.
 
 ```bash
-cd demo && node record_intro.mjs    # -> out/intro_1080p60.mp4 (+ _av1.mp4), about 1 min
+cd demo && node record_segment.mjs intro    # -> out/intro_1080p60.mp4 (+ _av1.mp4), about 1 min
 ```
 
 ## Shots and voiceover
@@ -56,7 +56,7 @@ dark bottom gradient for the text. Keep the lower third fairly clean: that's whe
 **Current clips (26 Sep):** S1 is a 360×640 vertical phone clip of an induction-furnace pour (first
 4 s), laid out as a portrait panel over a blurred copy of itself so it isn't upscaled 4×. S4 is a
 Flow/Veo clip; its bottom-right sparkle watermark is cropped out (1120×630 window). Both treatments
-live in `FX` in `record_intro.mjs`.
+live in `FX` in `record_segment.mjs`.
 
 Tips: generate 3–4 variants and pick the one with the slowest, steadiest camera. Fast motion fights
 the text. Keep the "Illustrative footage" tag; it tells judges these shots are AI visuals, not MOIL

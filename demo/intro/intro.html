@@ -151,6 +151,13 @@ const map = new maplibregl.Map({
 window.__fly = () => map.flyTo({ ...BELT, duration: 3400, curve: 1.3, essential: true });
 window.__reset = () => map.jumpTo(INDIA);
 window.__mapIdle = () => new Promise((r) => (map.loaded() && map.areTilesLoaded() ? r() : map.once("idle", r)));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// Rehearse the flight once in real time so every satellite tile is cached, then reset.
+window.__warm = async () => {
+  window.__render(9); window.__fly(); await sleep(4500); await window.__mapIdle();
+  window.__reset(); await sleep(1500); await window.__mapIdle();
+};
+window.__cues = [{ t: 8.0, run: () => window.__fly() }];
 
 // ── clips: the recorder sets window.CLIPS = { s1: "clips/_s1.webm", ... } for the ones that exist ──
 const videos = {};

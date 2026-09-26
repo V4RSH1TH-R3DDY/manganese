@@ -9,6 +9,9 @@
 //
 //   node record.mjs            full render → out/moil_demo_1080p60.mp4
 //   node record.mjs --preview  1× DPR, 30 fps, quick check
+//   node record.mjs --tour     Reserves / Actions / Data adapter tour for the outro (beats in
+//                              outro/OUTRO_SCRIPT.md). Point TOUR_URL at an instance running on a
+//                              copy of moil.db: the tour uploads a CSV and re-runs kriging.
 
 import { chromium } from "playwright";
 import { spawn } from "node:child_process";
@@ -19,22 +22,25 @@ import { fileURLToPath } from "node:url";
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const OUT = path.join(HERE, "out");
 const PREVIEW = process.argv.includes("--preview");
-const URL = process.env.DEMO_URL ?? "http://localhost:5173/";
+const TOUR = process.argv.includes("--tour");
+const URL = TOUR ? (process.env.TOUR_URL ?? "http://localhost:5174/") : (process.env.DEMO_URL ?? "http://localhost:5173/");
+const SCRIPT = TOUR ? "outro/OUTRO_SCRIPT.md" : "DEMO_SCRIPT.md";
+const TAG = TOUR ? "tour" : "demo";
 const VW = 1600, VH = 900;
 const DPR = PREVIEW ? 1 : 2;
 const FPS = PREVIEW ? 30 : 60;
-const T0 = 50;                                   // demo starts at 0:50 in the final cut
+const T0 = TOUR ? 110 : 50;                      // demo starts at 0:50, the tour at 1:50 in the final cut
 const REDEPLOY_MINE = process.env.REDEPLOY_MINE ?? "Balaghat";   // mine whose Redeploy card is shown (depends on the seed)
 
 // ── beat sheet from the markdown ────────────────────────────────────────────
 const beats = {};
-for (const line of fs.readFileSync(path.join(HERE, "DEMO_SCRIPT.md"), "utf8").split("\n")) {
+for (const line of fs.readFileSync(path.join(HERE, SCRIPT), "utf8").split("\n")) {
   const m = line.match(/^\|\s*([A-Z]+\d*)\s*\|\s*(\d+):(\d+(?:\.\d+)?)\s*\|(.*)\|\s*$/);
   if (!m) continue;
   const cells = m[4].split("|").map((c) => c.trim());
   beats[m[1]] = { t: +m[2] * 60 + +m[3] - T0, vo: cells.at(-1).replace(/^"|"$/g, "").replace(/^—$/, "") };
 }
-const B = (id) => { if (!(id in beats)) throw new Error(`beat ${id} missing from DEMO_SCRIPT.md`); return beats[id].t; };
+const B = (id) => { if (!(id in beats)) throw new Error(`beat ${id} missing from ${SCRIPT}`); return beats[id].t; };
 
 // ── easing / math ───────────────────────────────────────────────────────────
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
@@ -100,7 +106,7 @@ async function renderFrame() {
   const shot = await guard(cdp.send("Page.captureScreenshot", { format: "jpeg", quality: 93, optimizeForSpeed: true }), "screenshot");
   const buf = Buffer.from(shot.data, "base64");
   if (!ffmpeg.stdin.write(buf)) await new Promise((r) => ffmpeg.stdin.once("drain", r));
-  if (pendingCue) { fs.writeFileSync(path.join(OUT, "cues", `${pendingCue}.jpg`), buf); pendingCue = null; }
+  if (pendingCue) { fs.writeFileSync(path.join(OUT, `cues_${TAG}`, `${pendingCue}.jpg`), buf); pendingCue = null; }
   frame++;
 }
 let pendingCue = null;
@@ -435,9 +441,110 @@ async function show({ dbz }) {
   await beat("END");
 }
 
+// ── tour: the other three tabs (outro, 1:50-2:02) ──────────────────────────
+const TX = {
+  nav: (name) => `//nav//a[normalize-space()='${name}']`,
+  resHeader: "//h2[contains(., 'Reserve estimates')]/..",
+  resCharts: "(//div[contains(@class,'echarts-for-react')])[1]/../..",
+  histogram: "(//div[contains(@class,'echarts-for-react')])[2]/..",
+  cutoff: "//label[contains(., 'Cut-off')]//input",
+  recompute: "//button[contains(., 'Recompute') or contains(., 'Kriging')]",
+  actionsHeader: "//h2[contains(., 'All recommended actions')]/..",
+  firstCard: "(//article)[1]",
+  rerun: "//button[contains(., 'Re-run') or contains(., 'Optimizing')]",
+  ingestHeader: "//h2[contains(., 'Data adapter')]/..",
+  download: "//button[contains(., 'sample CSV') or contains(., 'Downloading')]",
+  dropzone: "//label[contains(., 'Drop CSV')]",
+  records: "//h3[contains(., 'Latest Database Entries')]/../..",
+};
+const TOUR_CSV = process.env.TOUR_CSV;
+
+async function tourPreroll() {
+  await page.goto(URL);
+  await page.waitForSelector("text=Recommended actions");
+  await page.waitForTimeout(3000);
+  // Match the demo's last frame so the 1:50 cut is invisible: satellite basemap + the what-if
+  // on the Redeploy card still applied.
+  await page.click("xpath=" + X.basemap("Satellite"));
+  await page.waitForTimeout(3500);
+  await page.click("xpath=" + X.simulate(1));
+  await page.waitForTimeout(2500);
+  await page.evaluate(() => window.scrollTo(0, 0));             // the click scrolled the button into view
+  await page.mouse.move(VW / 2, VH - 20);
+  return {};
+}
+
+async function setCutoff(v) {                                   // React-controlled number input
+  await page.evaluate(([xp, val]) => {
+    const el = document.evaluate(xp, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(el, String(val));
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+  }, [TX.cutoff, v]);
+}
+
+async function showTour() {
+  // Reserves
+  await beat("T1");
+  tween(0.5, (u) => { cur.o = u; });
+  await moveTo(center(await rect(TX.nav("Reserves"))), 0.8);
+  await until(B("T1") + 0.9);
+  await click();
+
+  await beat("T2");
+  camTo(union(await rect(TX.resHeader), await rect(TX.resCharts)), { max: 1.25, dur: 1.1, pad: 30 });
+  await wait(0.2);
+  await moveTo(center(await rect(TX.cutoff)), 0.8);
+  await click();
+  await wait(0.15);
+  await setCutoff(30);
+
+  await beat("T3");
+  await moveTo(center(await rect(TX.recompute)), 0.5);
+  await wait(0.05);
+  await click();                                                // re-krige at 30% Mn
+
+  await beat("T4");
+  const h = await rect(TX.histogram);
+  await moveTo({ x: h.x + h.w * 0.55, y: h.y + h.h * 0.55 }, 0.9);
+
+  // Actions
+  await beat("T5");
+  camWide(0.9);
+  await moveTo(center(await rect(TX.nav("Actions"))), 0.6);
+  await until(B("T5") + 0.7);
+  await click();
+
+  await beat("T6");
+  const c = await rect(TX.firstCard);
+  await moveTo({ x: c.x + c.w * 0.4, y: c.y + 60 }, 0.6);
+  await moveTo(center(await rect(TX.rerun)), 0.8);
+  await until(B("T6") + 1.6);
+  await click();                                                // re-run the fleet optimizer
+
+  // Data adapter
+  await beat("T7");
+  await moveTo(center(await rect(TX.nav("Data adapter"))), 0.5);
+  await until(B("T7") + 0.6);
+  await click();
+
+  await beat("T8");
+  camTo(union(await rect(TX.ingestHeader), await rect(TX.dropzone)), { max: 1.3, dur: 0.9, pad: 40 });
+  await moveTo(center(await rect(TX.download)), 0.5);
+  await click();
+  await moveTo(center(await rect(TX.dropzone)), 0.6);
+  await click();
+  if (TOUR_CSV) await page.setInputFiles("input[type=file]", TOUR_CSV);   // the "drop"
+
+  await beat("T9");
+  camTo(await rect(TX.records), { max: 1.2, dur: 0.8, pad: 30, fy: 0.3 });
+  tween(0.6, (u) => { cur.o = 1 - u; });
+
+  await beat("END");
+}
+
 // ── main ────────────────────────────────────────────────────────────────────
-fs.mkdirSync(path.join(OUT, "cues"), { recursive: true });
-const outFile = path.join(OUT, PREVIEW ? "moil_demo_preview.mp4" : "moil_demo_1080p60.mp4");
+fs.mkdirSync(path.join(OUT, `cues_${TAG}`), { recursive: true });
+const outFile = path.join(OUT, TOUR ? "tour_1080p60.mp4" : PREVIEW ? "moil_demo_preview.mp4" : "moil_demo_1080p60.mp4");
 ffmpeg = spawn("ffmpeg", ["-y", "-loglevel", "error", "-f", "image2pipe", "-framerate", String(FPS), "-c:v", "mjpeg", "-i", "-",
   "-filter_complex", "scale=1920:1080:flags=lanczos,format=yuv420p,split=2[h264][av1]",
   // H.264 for Premiere / Final Cut / CapCut / web …
@@ -453,18 +560,18 @@ const browser = await chromium.launch({
 });
 const ctx = await browser.newContext({ viewport: { width: VW, height: VH }, deviceScaleFactor: DPR, colorScheme: "dark" });
 await ctx.addInitScript(OVERLAY);
-await rehearse(ctx);
+if (!TOUR) await rehearse(ctx);
 page = await ctx.newPage();
 page.on("pageerror", (e) => console.error("pageerror:", e.message));
 await page.clock.install();                                     // virtual clock; flows naturally until paused
-const anchors = await preroll();
+const anchors = TOUR ? await tourPreroll() : await preroll();
 await page.clock.pauseAt(Date.now() + 1000);
 cdp = await ctx.newCDPSession(page);
 
 const started = Date.now();
 const ticker = setInterval(() => process.stdout.write(`\r  frame ${frame}  (${now().toFixed(1)} s video)   `), 1000);
 try {
-  await show(anchors);
+  await (TOUR ? showTour() : show(anchors));
   await until(B("END") + 0.02);
 } finally {
   clearInterval(ticker);
@@ -482,7 +589,7 @@ console.log(`\n\n  ${frame} frames → ${outFile}  (${((Date.now() - started) / 
 console.log("  beat   planned   actual");
 for (const c of cues) console.log(`  ${c.id.padEnd(5)}  ${fmt(c.planned)}    ${fmt(c.actual)}${Math.abs(c.actual - c.planned) > 0.05 ? "   ⚠ late" : ""}`);
 const spoken = cues.filter((c) => c.vo);
-fs.writeFileSync(path.join(OUT, "voiceover_guide.srt"), spoken.map((c, i) => {
+fs.writeFileSync(path.join(OUT, TOUR ? "tour_voiceover.srt" : "voiceover_guide.srt"), spoken.map((c, i) => {
   const end = (spoken[i + 1]?.actual ?? B("END")) - 0.05;
   return `${i + 1}\n${srtT(c.actual)} --> ${srtT(end)}\n[${c.id}] ${c.vo}\n`;
 }).join("\n"));

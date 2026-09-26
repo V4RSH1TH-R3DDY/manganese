@@ -42,6 +42,11 @@ export default function MapView({
   const minesRef = useRef(mines); minesRef.current = mines;
   const popup = useRef<{ code: string | null; p: maplibregl.Popup } | null>(null);
 
+  // Run once the style has loaded, then immediately. isStyleLoaded() is also false while tiles
+  // stream in, and "load" fires only once, so changes made mid-zoom used to be dropped.
+  const styleReady = useRef(false);
+  const onLoaded = (m: MapLibreMap, fn: () => void) => (styleReady.current ? fn() : m.once("load", fn));
+
   // A mine marker under the click wins over deposit / drill-hole dots drawn near it.
   const mineUnder = (m: MapLibreMap, point: maplibregl.PointLike) =>
     !!m.getLayer("mines-dot") && m.queryRenderedFeatures(point, { layers: ["mines-dot"] }).length > 0;
@@ -73,6 +78,7 @@ export default function MapView({
       },
     });
     m.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
+    m.once("load", () => { styleReady.current = true; });
     map.current = m;
     return () => m.remove();
   }, []);
@@ -90,7 +96,7 @@ export default function MapView({
         m.setLayoutProperty("osm-layer", "visibility", basemap === "streets" ? "visible" : "none");
       }
     };
-    m.isStyleLoaded() ? apply() : m.once("load", apply);
+    onLoaded(m, apply);
   }, [basemap]);
 
   useEffect(() => {                                            // prospectivity raster
@@ -103,7 +109,7 @@ export default function MapView({
       }
       m.setLayoutProperty("prosp", "visibility", showProsp ? "visible" : "none");
     };
-    m.isStyleLoaded() ? apply() : m.once("load", apply);
+    onLoaded(m, apply);
   }, [prospectivity, showProsp]);
 
   useEffect(() => {                                            // deposits layer (MRDS/GSI)
@@ -161,7 +167,7 @@ export default function MapView({
         m.setLayoutProperty("deposits-dot", "visibility", showDeposits ? "visible" : "none");
       }
     };
-    m.isStyleLoaded() ? apply() : m.once("load", apply);
+    onLoaded(m, apply);
   }, [deposits, showDeposits]);
 
   useEffect(() => {                                            // drillhole markers
@@ -203,7 +209,7 @@ export default function MapView({
         m.setLayoutProperty("drillholes-dot", "visibility", showDrillholes ? "visible" : "none");
       }
     };
-    m.isStyleLoaded() ? apply() : m.once("load", apply);
+    onLoaded(m, apply);
   }, [drillholes, showDrillholes]);
 
   useEffect(() => {                                            // mine markers
@@ -227,7 +233,7 @@ export default function MapView({
       m.on("mouseenter", "mines-dot", () => (m.getCanvas().style.cursor = "pointer"));
       m.on("mouseleave", "mines-dot", () => (m.getCanvas().style.cursor = ""));
     };
-    m.isStyleLoaded() ? apply() : m.once("load", apply);
+    onLoaded(m, apply);
   }, [mines, onSelect]);
 
   useEffect(() => {                                            // fly to + highlight selection

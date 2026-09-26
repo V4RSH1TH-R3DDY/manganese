@@ -1,9 +1,13 @@
-// Renders the 20 s problem-statement intro (0:00-0:20) from intro/intro.html, frame-perfect at 60 fps.
+// Renders a timeline-driven HTML segment frame-perfect at 60 fps.
 //
-// Put AI clips in intro/clips/ as s1.<ext> (steel pour) and s4.<ext> (monsoon pit); any format
-// ffmpeg reads. Missing clips render as labelled placeholders so the cut can be reviewed first.
+//   node record_segment.mjs intro      0:00-0:20 problem statement -> out/intro_1080p60.mp4
+//   node record_segment.mjs solution   0:20-0:50 solution          -> out/solution_1080p60.mp4
+//                                      (run capture_assets.mjs first, with `make run` up)
+//   node record_segment.mjs outro      2:02-2:18 impact, roadmap   -> out/outro_1080p60.mp4
 //
-//   node record_intro.mjs     -> out/intro_1080p60.mp4 (+ _av1.mp4)
+// The page exposes __render(t) and optionally __ready(), __seek(t) (video clips), __warm() (one-off
+// prep such as caching map tiles) and __cues = [{ t, run }] (actions fired once at time t).
+// Clips go in <segment>/clips/ as <id>.<ext>; missing ones render as labelled placeholders.
 
 import { chromium } from "playwright";
 import { spawn, spawnSync } from "node:child_process";
@@ -11,11 +15,20 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+const SEGMENTS = {
+  intro:    { page: "intro/intro.html", dur: 20, clips: ["s1", "s4"] },
+  solution: { page: "solution/solution.html", dur: 30, clips: [] },
+  outro:    { page: "outro/outro.html", dur: 16, clips: [] },
+};
+const NAME = process.argv[2] ?? "intro";
+const SEG = SEGMENTS[NAME];
+if (!SEG) throw new Error(`unknown segment "${NAME}"; one of ${Object.keys(SEGMENTS).join(", ")}`);
+
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const INTRO = path.join(HERE, "intro");
-const CLIPS = path.join(INTRO, "clips");
+const PAGE = path.join(HERE, SEG.page);
+const CLIPS = path.join(path.dirname(PAGE), "clips");
 const OUT = path.join(HERE, "out");
-const FPS = 60, DUR = 20, VW = 1600, VH = 900;
+const FPS = 60, DUR = SEG.dur, VW = 1600, VH = 900;
 
 // ── clips: per-shot treatment, then all-keyframe VP9 so every per-frame seek is exact and fast ──
 const FILL = `scale=${VW}:${VH}:force_original_aspect_ratio=increase:flags=lanczos,crop=${VW}:${VH}`;
@@ -30,8 +43,8 @@ const FX = {
   s4: `[0:v]crop=1120:630:10:0,${FILL},fps=30[out]`,
 };
 const clips = {};
-for (const id of ["s1", "s4"]) {
-  const src = fs.readdirSync(CLIPS).find((f) => f.startsWith(id + ".") && !f.startsWith("_"));
+for (const id of SEG.clips) {
+  const src = (fs.existsSync(CLIPS) ? fs.readdirSync(CLIPS) : []).find((f) => f.startsWith(id + ".") && !f.startsWith("_"));
   if (!src) { console.log(`  ${id}: no clip, using placeholder`); continue; }
   const inp = path.join(CLIPS, src), out = path.join(CLIPS, `_${id}.webm`);
   if (!fs.existsSync(out) || fs.statSync(out).mtimeMs < fs.statSync(inp).mtimeMs) {
@@ -46,7 +59,7 @@ for (const id of ["s1", "s4"]) {
 }
 
 fs.mkdirSync(OUT, { recursive: true });
-const outFile = path.join(OUT, "intro_1080p60.mp4");
+const outFile = path.join(OUT, `${NAME}_1080p60.mp4`);
 const ffmpeg = spawn("ffmpeg", ["-y", "-loglevel", "error", "-f", "image2pipe", "-framerate", String(FPS), "-c:v", "mjpeg", "-i", "-",
   "-filter_complex", "scale=1920:1080:flags=lanczos,format=yuv420p,split=2[h264][av1]",
   "-map", "[h264]", "-c:v", "h264_nvenc", "-preset", "p7", "-tune", "hq", "-rc", "vbr", "-cq", "16", "-b:v", "0",
@@ -63,26 +76,20 @@ const ctx = await browser.newContext({ viewport: { width: VW, height: VH }, devi
 await ctx.addInitScript((c) => { window.CLIPS = c; }, clips);
 const page = await ctx.newPage();
 page.on("pageerror", (e) => console.error("pageerror:", e.message));
-await page.clock.install();                                   // MapLibre flight runs on virtual time
-await page.goto(pathToFileURL(path.join(INTRO, "intro.html")).href);
-await page.evaluate(() => window.__ready());
-
-// Rehearse the satellite flight once in real time so every tile is cached, then reset.
-await page.evaluate(() => { window.__render(9); window.__fly(); });
-await page.waitForTimeout(4500);
-await page.evaluate(() => window.__mapIdle());
-await page.evaluate(() => { window.__reset(); window.__render(0); });
-await page.waitForTimeout(1500);
-await page.evaluate(() => window.__mapIdle());
+await page.clock.install();                                   // rAF / timers run on virtual time
+await page.goto(pathToFileURL(PAGE).href);
+await page.evaluate(async () => { await window.__ready?.(); await window.__warm?.(); window.__render(0); });
 await page.clock.pauseAt(Date.now() + 1000);
 const cdp = await ctx.newCDPSession(page);
 
-let flown = false;
+const cueTimes = await page.evaluate(() => (window.__cues ?? []).map((c) => c.t));
+const fired = new Set();
 const started = Date.now();
 for (let f = 0; f < DUR * FPS; f++) {
   const t = f / FPS;
-  if (!flown && t >= 8.0) { await page.evaluate(() => window.__fly()); flown = true; }
-  await page.evaluate(async (tt) => { window.__render(tt); await window.__seek(tt); }, t);
+  for (const [i, ct] of cueTimes.entries())
+    if (!fired.has(i) && t >= ct) { await page.evaluate((k) => window.__cues[k].run(), i); fired.add(i); }
+  await page.evaluate(async (tt) => { window.__render(tt); await window.__seek?.(tt); }, t);
   await page.clock.runFor(Math.round(((f + 1) * 1000) / FPS) - Math.round((f * 1000) / FPS));
   const shot = await cdp.send("Page.captureScreenshot", { format: "jpeg", quality: 93, optimizeForSpeed: true });
   if (!ffmpeg.stdin.write(Buffer.from(shot.data, "base64"))) await new Promise((r) => ffmpeg.stdin.once("drain", r));
