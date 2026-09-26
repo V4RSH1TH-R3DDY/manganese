@@ -2,41 +2,38 @@
 
 # MOIL Manganese Copilot
 
-### From mine signals to confident next-shift decisions.
+### Turn mine signals into better next-shift decisions.
 
 **SIH 2026 · Problem Statement 26009**
 
 </div>
 
 <p align="center">
-  <a href="docs/media/moil-short-demo.webm">
-    <img src="docs/media/recommended-actions.png" alt="MOIL Copilot ranking mine actions by expected recovery and confidence" width="100%">
-  </a>
-  <br>
-  <sub>▶ Open the short product walkthrough</sub>
+  <img src="docs/media/recommended-actions.png" alt="MOIL Copilot command view ranking mining actions by expected recovery and confidence" width="100%">
 </p>
 
-Mining decisions are connected: where to explore, what the orebody may hold, and how to keep production on plan. MOIL Copilot brings those signals together so teams can move from **spotting risk** to **understanding why** and **choosing what to do next**.
+Mine teams make linked decisions every day: where to explore, what reserves may be present, and how to keep production on plan. MOIL Manganese Copilot brings those signals into one decision-support workflow, helping teams see emerging risk, understand its drivers, and compare practical next steps.
 
-## One connected view
+## Our approach
 
-- **Explore:** satellite and geology indicators help rank areas for investigation; drill assays inform reserve estimates.
-- **Anticipate:** production, rainfall, equipment, and blasting signals help reveal shortfall risk and its drivers.
-- **Respond:** practical recommendations are ranked by expected recovery, with confidence and what-if simulation.
+1. **Explore:** satellite and geology indicators rank areas for investigation. Drill-hole assays inform approximate reserve ranges.
+2. **Anticipate:** production, weather, equipment, and blasting data reveal shortfall risk and the factors driving it.
+3. **Respond:** operational recommendations are ranked by estimated recovery and confidence, then tested with a what-if forecast.
 
-<p align="center">
-  <img src="docs/media/data-adapter.png" alt="MOIL Copilot data adapter for mine records and CSV uploads" width="100%">
-  <br>
-  <sub>Bring mine data into the same operational picture.</sub>
-</p>
+Satellite data does **not** detect manganese underground. It helps prioritize places to investigate; geological sampling is needed to estimate grade and tonnes. Demo operations and drill data are labeled as synthetic. Weather can use the live Open-Meteo feed, while production, equipment, blasting, and assay data become mine-specific when real records are supplied.
 
-## Built with honesty
+## Walkthrough
 
-Satellite signals **do not see manganese underground**; they help identify places worth investigating. The demo clearly labels synthetic operations and drill data. Weather can use live Open-Meteo feeds; operational data becomes genuinely mine-specific when real records are supplied.
+<video controls preload="metadata" width="100%" poster="https://raw.githubusercontent.com/MUKUL-PRASAD-SIGH/manganese/main/docs/media/recommended-actions.png">
+  <source src="https://raw.githubusercontent.com/MUKUL-PRASAD-SIGH/manganese/main/docs/media/moil-short-demo.webm" type="video/webm">
+  Your browser cannot play this WebM video. <a href="https://raw.githubusercontent.com/MUKUL-PRASAD-SIGH/manganese/main/docs/media/moil-short-demo.webm">Download the walkthrough</a>.
+</video>
 
-## Try the demo
+If the player is unavailable in your GitHub view, [open or download the short WebM walkthrough](https://raw.githubusercontent.com/MUKUL-PRASAD-SIGH/manganese/main/docs/media/moil-short-demo.webm).
 
-Requires GNU Make, Node 20+, and Python 3.12 (or [uv](https://docs.astral.sh/uv/), which fetches it). From the project folder:
+## Run it
+
+Requires GNU Make, Node 20+, and Python 3.12 (or [uv](https://docs.astral.sh/uv/), which fetches it). No Docker or `.env` needed. From the repository folder:
 
 ```bash
 make          # install, seed demo data, train, precompute, then start API + dashboard
