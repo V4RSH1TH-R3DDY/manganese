@@ -333,7 +333,9 @@ async function show({ dbz }) {
   await click();                                                // popup + fly-to Dongri Buzurg
 
   await beat("A4");
-  await moveTo(center(await rect(X.basemap("Satellite"))), 1.1);
+  const sat = await rect(X.basemap("Satellite"));               // keep the basemap switcher on screen
+  camTo(union(await rect(X.map), sat), { max: 1.25, dur: 1.0, pad: 24 });
+  await moveTo(center(sat), 1.1);
   await wait(0.2);
   await click();                                                // satellite imagery under the heat-map
   await moveTo({ x: cur.x - 180, y: cur.y + 220 }, 1.4);
