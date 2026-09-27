@@ -20,7 +20,7 @@ cd demo && node record_segment.mjs intro    # -> out/intro_1080p60.mp4 (+ _av1.m
 | S4 | 0:14.4–0:19.2 | **Higgsfield:** flooded open pit in monsoon rain, stalled dumper | *Mines lose output to monsoon rain and equipment breakdowns.* | "And working mines lose output to monsoon rain and equipment breakdowns —" |
 | S5 | 0:19.2–0:24 | Production line falls below plan during a rain spell; month-end marker and gap | *…and it's found only after the month closes.* | "usually found only after the month has closed." |
 
-Then cut to the 0:20 solution section.
+Then cut to the 0:24 solution section.
 
 **Facts used (all on screen with their source):** Indian Bureau of Mines, *Indian Minerals Yearbook
 2022, Manganese Ore* (`docs/references/Manganese_Ore_2022.pdf`): production 2,696 kt and imports
